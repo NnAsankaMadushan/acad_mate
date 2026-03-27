@@ -1,0 +1,461 @@
+import 'package:acad_mate/app/providers.dart';
+import 'package:acad_mate/core/config/app_config.dart';
+import 'package:acad_mate/core/widgets/brand_mark.dart';
+import 'package:acad_mate/core/widgets/glass_card.dart';
+import 'package:acad_mate/core/widgets/gradient_backdrop.dart';
+import 'package:acad_mate/domain/repositories/auth_repository.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+class LoginScreen extends ConsumerStatefulWidget {
+  const LoginScreen({super.key});
+
+  @override
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends ConsumerState<LoginScreen> {
+  final GlobalKey<FormState> _signInFormKey = GlobalKey<FormState>();
+  final GlobalKey<FormState> _signUpFormKey = GlobalKey<FormState>();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  bool _isSignIn = true;
+  bool _isBusy = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final formKey = _isSignIn ? _signInFormKey : _signUpFormKey;
+    if (!(formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+
+    await _runAuthAction((AuthRepository repo) async {
+      if (_isSignIn) {
+        await repo.signIn(
+          email: _emailController.text,
+          password: _passwordController.text,
+        );
+      } else {
+        await repo.register(
+          name: _nameController.text,
+          email: _emailController.text,
+          password: _passwordController.text,
+          grade: 'A/L',
+          stream: 'Science',
+        );
+      }
+    });
+  }
+
+  Future<void> _signInWithProvider(SocialAuthProvider provider) async {
+    await _runAuthAction((AuthRepository repo) {
+      return repo.signInWithProvider(provider);
+    });
+  }
+
+  Future<void> _runAuthAction(
+    Future<void> Function(AuthRepository repo) action,
+  ) async {
+    FocusScope.of(context).unfocus();
+    setState(() => _isBusy = true);
+
+    final AuthRepository repo = ref.read(authRepositoryProvider);
+    try {
+      await action(repo);
+
+      if (!mounted) {
+        return;
+      }
+      context.go('/app');
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
+    } finally {
+      if (mounted) {
+        setState(() => _isBusy = false);
+      }
+    }
+  }
+
+  Future<void> _forgotPassword() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Enter your email first.')));
+      return;
+    }
+
+    try {
+      await ref.read(authRepositoryProvider).sendPasswordResetEmail(email);
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password reset email sent.')),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool supportsFederatedAuth =
+        kIsWeb ||
+        defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS;
+    final Widget socialAuthSection =
+        supportsFederatedAuth || !AppConfig.useFirebase
+        ? Row(
+            children: <Widget>[
+              Expanded(
+                child: _SocialAuthButton(
+                  label: 'Google',
+                  accent: const Color(0xFFDB4437),
+                  glyph: 'G',
+                  isBusy: _isBusy,
+                  onPressed: () =>
+                      _signInWithProvider(SocialAuthProvider.google),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _SocialAuthButton(
+                  label: 'Facebook',
+                  accent: const Color(0xFF1877F2),
+                  glyph: 'F',
+                  isBusy: _isBusy,
+                  onPressed: () =>
+                      _signInWithProvider(SocialAuthProvider.facebook),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _SocialAuthButton(
+                  label: 'Apple',
+                  accent: Colors.black,
+                  glyph: 'A',
+                  isBusy: _isBusy,
+                  onPressed: () =>
+                      _signInWithProvider(SocialAuthProvider.apple),
+                ),
+              ),
+            ],
+          )
+        : Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              'Social login is available on mobile, macOS, and web.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          );
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: GradientBackdrop(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  const SizedBox(height: 8),
+                  const BrandIntro(logoSize: 120, heroTag: 'acadmate-brand'),
+                  const SizedBox(height: 22),
+                  GlassCard(
+                    padding: const EdgeInsets.all(22),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        Row(
+                          children: <Widget>[
+                            Expanded(
+                              child: ChoiceChip(
+                                label: const Text('Sign In'),
+                                selected: _isSignIn,
+                                onSelected: (_) {
+                                  setState(() => _isSignIn = true);
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ChoiceChip(
+                                label: const Text('Create Account'),
+                                selected: !_isSignIn,
+                                onSelected: (_) {
+                                  setState(() => _isSignIn = false);
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 280),
+                          child: _isSignIn
+                              ? Form(
+                                  key: _signInFormKey,
+                                  child: Column(
+                                    key: const ValueKey<String>('signIn'),
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: <Widget>[
+                                      TextFormField(
+                                        controller: _emailController,
+                                        keyboardType:
+                                            TextInputType.emailAddress,
+                                        decoration: const InputDecoration(
+                                          labelText: 'Email address',
+                                          prefixIcon: Icon(Icons.email_rounded),
+                                        ),
+                                        validator: _validateEmail,
+                                      ),
+                                      const SizedBox(height: 14),
+                                      TextFormField(
+                                        controller: _passwordController,
+                                        obscureText: true,
+                                        decoration: const InputDecoration(
+                                          labelText: 'Password',
+                                          prefixIcon: Icon(Icons.lock_rounded),
+                                        ),
+                                        validator: _validatePassword,
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: TextButton(
+                                          onPressed: _forgotPassword,
+                                          child: const Text('Forgot password?'),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      _ActionButton(
+                                        isBusy: _isBusy,
+                                        label: 'Sign In',
+                                        onPressed: _submit,
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : Form(
+                                  key: _signUpFormKey,
+                                  child: Column(
+                                    key: const ValueKey<String>('signUp'),
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: <Widget>[
+                                      TextFormField(
+                                        controller: _nameController,
+                                        textInputAction: TextInputAction.next,
+                                        decoration: const InputDecoration(
+                                          labelText: 'Full name',
+                                          prefixIcon: Icon(Icons.person_rounded),
+                                        ),
+                                        validator: (value) {
+                                          if (value == null ||
+                                              value.trim().length < 3) {
+                                            return 'Enter your full name';
+                                          }
+                                          return null;
+                                        },
+                                      ),
+                                      const SizedBox(height: 14),
+                                      TextFormField(
+                                        controller: _emailController,
+                                        keyboardType:
+                                            TextInputType.emailAddress,
+                                        textInputAction: TextInputAction.next,
+                                        decoration: const InputDecoration(
+                                          labelText: 'Email address',
+                                          prefixIcon: Icon(Icons.email_rounded),
+                                        ),
+                                        validator: _validateEmail,
+                                      ),
+                                      const SizedBox(height: 14),
+                                      TextFormField(
+                                        controller: _passwordController,
+                                        obscureText: true,
+                                        decoration: const InputDecoration(
+                                          labelText: 'Password',
+                                          prefixIcon: Icon(Icons.lock_rounded),
+                                        ),
+                                        validator: _validatePassword,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      _ActionButton(
+                                        isBusy: _isBusy,
+                                        label: 'Create account',
+                                        onPressed: _submit,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                        ),
+                        const SizedBox(height: 18),
+                        Row(
+                          children: <Widget>[
+                            const Expanded(child: Divider()),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 12),
+                              child: Text(
+                                'Or continue with',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelLarge
+                                    ?.copyWith(fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                            const Expanded(child: Divider()),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        socialAuthSection,
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String? _validateEmail(String? value) {
+    final String text = value?.trim() ?? '';
+    if (text.isEmpty) {
+      return 'Enter your email';
+    }
+    final bool valid = RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(text);
+    if (!valid) {
+      return 'Enter a valid email';
+    }
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    if ((value ?? '').length < 6) {
+      return 'Password must be at least 6 characters';
+    }
+    return null;
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.isBusy,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final bool isBusy;
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 54,
+      child: FilledButton(
+        onPressed: isBusy ? null : onPressed,
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          child: isBusy
+              ? const SizedBox(
+                  key: ValueKey<String>('loading'),
+                  height: 22,
+                  width: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2.2),
+                )
+              : Text(label, key: ValueKey<String>(label)),
+        ),
+      ),
+    );
+  }
+}
+
+class _SocialAuthButton extends StatelessWidget {
+  const _SocialAuthButton({
+    required this.label,
+    required this.accent,
+    required this.glyph,
+    required this.isBusy,
+    required this.onPressed,
+  });
+
+  final String label;
+  final Color accent;
+  final String glyph;
+  final bool isBusy;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    return OutlinedButton(
+      onPressed: isBusy ? null : onPressed,
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+        minimumSize: const Size.fromHeight(52),
+        side: BorderSide(color: accent.withValues(alpha: 0.25)),
+        foregroundColor: colors.onSurface,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              glyph,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: accent,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
