@@ -20,26 +20,16 @@ Future<void> bootstrap() async {
     try {
       if (options != null) {
         await Firebase.initializeApp(options: options);
+        AppConfig.firebaseReady = true;
       } else if (!kIsWeb) {
         // Android can fall back to the native google-services.json config.
         await Firebase.initializeApp();
-      } else {
-        throw StateError(
-          'Firebase configuration not available. Running AcadMate in demo mode.',
-        );
+        AppConfig.firebaseReady = true;
       }
-      AppConfig.firebaseReady = true;
-    } catch (error, stackTrace) {
-      debugPrint('Firebase initialization failed, using demo mode.');
-      debugPrint('$error');
-      debugPrint('$stackTrace');
+    } catch (_) {
+      // Leave Firebase disabled and continue in the configured fallback mode.
     }
   }
 
-  runApp(
-    const ProviderScope(
-      child: AcadMateApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: AcadMateApp()));
 }
-

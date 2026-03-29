@@ -1,5 +1,4 @@
 import 'package:acad_mate/app/providers.dart';
-import 'package:acad_mate/core/config/app_config.dart';
 import 'package:acad_mate/core/theme/app_colors.dart';
 import 'package:acad_mate/core/widgets/brand_mark.dart';
 import 'package:acad_mate/core/widgets/glass_card.dart';
@@ -52,10 +51,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                BrandIntro(
-                  logoSize: 170,
-                  heroTag: 'acadmate-brand',
-                )
+                BrandIntro(logoSize: 170, heroTag: 'acadmate-brand')
                     .animate()
                     .fadeIn(duration: 700.ms)
                     .scale(
@@ -69,27 +65,29 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                   height: 10,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(999),
-                    color: Theme.of(context)
-                        .colorScheme
-                        .primary
-                        .withValues(alpha: 0.08),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.08),
                   ),
                   child: Align(
                     alignment: Alignment.centerLeft,
-                    child: Container(
-                      width: 116,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(999),
-                        gradient: const LinearGradient(
-                          colors: <Color>[
-                            AppColors.primary,
-                            AppColors.secondary,
-                          ],
-                        ),
-                      ),
-                    )
-                        .animate(onPlay: (controller) => controller.repeat())
-                        .moveX(begin: -8, end: 70, duration: 1200.ms),
+                    child:
+                        Container(
+                              width: 116,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(999),
+                                gradient: const LinearGradient(
+                                  colors: <Color>[
+                                    AppColors.primary,
+                                    AppColors.secondary,
+                                  ],
+                                ),
+                              ),
+                            )
+                            .animate(
+                              onPlay: (controller) => controller.repeat(),
+                            )
+                            .moveX(begin: -8, end: 70, duration: 1200.ms),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -97,23 +95,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                   'Curated MCQs, past papers, and exam tracking',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white70
-                            : null,
-                      ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  AppConfig.useMongoBackend
-                      ? 'Firebase auth with MongoDB profile sync'
-                      : AppConfig.useFirebase
-                          ? 'Connected to Firebase'
-                          : 'Demo mode ready for Firebase setup',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white60
-                            : null,
-                      ),
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white70
+                        : null,
+                  ),
                 ),
               ],
             ),
@@ -123,4 +108,3 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     );
   }
 }
-

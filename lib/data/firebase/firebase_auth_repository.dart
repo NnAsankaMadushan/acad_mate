@@ -13,9 +13,9 @@ class FirebaseAuthRepository implements AuthRepository {
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
     BackendProfileClient? backendProfileClient,
-  })  : _auth = auth ?? FirebaseAuth.instance,
-        _firestore = firestore ?? FirebaseFirestore.instance,
-        _backendProfileClient = backendProfileClient;
+  }) : _auth = auth ?? FirebaseAuth.instance,
+       _firestore = firestore ?? FirebaseFirestore.instance,
+       _backendProfileClient = backendProfileClient;
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
@@ -31,8 +31,8 @@ class FirebaseAuthRepository implements AuthRepository {
   @override
   Stream<AppUser?> authStateChanges() {
     return _auth.authStateChanges().asyncMap(
-          (User? user) async => user == null ? null : _mapFirebaseUser(user),
-        );
+      (User? user) async => user == null ? null : _mapFirebaseUser(user),
+    );
   }
 
   @override
@@ -53,14 +53,11 @@ class FirebaseAuthRepository implements AuthRepository {
     required String stream,
   }) async {
     final UserCredential credential = await _auth
-        .createUserWithEmailAndPassword(
-          email: email.trim(),
-          password: password,
-        )
+        .createUserWithEmailAndPassword(email: email.trim(), password: password)
         .then((UserCredential value) async {
-      await value.user?.updateDisplayName(name.trim());
-      return value;
-    });
+          await value.user?.updateDisplayName(name.trim());
+          return value;
+        });
 
     final User? user = credential.user;
     if (user == null) {
@@ -78,10 +75,7 @@ class FirebaseAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> signIn({
-    required String email,
-    required String password,
-  }) async {
+  Future<void> signIn({required String email, required String password}) async {
     await _auth.signInWithEmailAndPassword(
       email: email.trim(),
       password: password,
@@ -101,7 +95,6 @@ class FirebaseAuthRepository implements AuthRepository {
         await _signInWithApple();
         break;
     }
-
   }
 
   @override
@@ -118,25 +111,21 @@ class FirebaseAuthRepository implements AuthRepository {
     if (kIsWeb) {
       final GoogleAuthProvider provider = GoogleAuthProvider()
         ..addScope('email')
-        ..setCustomParameters(<String, String>{
-          'prompt': 'select_account',
-        });
+        ..setCustomParameters(<String, String>{'prompt': 'select_account'});
       await _auth.signInWithPopup(provider);
       return;
     }
 
     final String? serverClientId =
         defaultTargetPlatform == TargetPlatform.android
-            ? null
-            : AppConfig.googleServerClientId.trim().isEmpty
-                ? null
-                : AppConfig.googleServerClientId.trim();
+        ? null
+        : AppConfig.googleServerClientId.trim().isEmpty
+        ? null
+        : AppConfig.googleServerClientId.trim();
     await _ensureGoogleSignInInitialized(serverClientId: serverClientId);
     try {
-      final GoogleSignInAccount account =
-          await GoogleSignIn.instance.authenticate(
-        scopeHint: <String>['email'],
-      );
+      final GoogleSignInAccount account = await GoogleSignIn.instance
+          .authenticate(scopeHint: <String>['email']);
       final GoogleSignInAuthentication auth = account.authentication;
       final String? idToken = auth.idToken;
       if (idToken == null || idToken.isEmpty) {
@@ -171,7 +160,8 @@ class FirebaseAuthRepository implements AuthRepository {
       permissions: <String>['email', 'public_profile'],
     );
     if (result.status != LoginStatus.success) {
-      final String message = result.message ?? 'Facebook sign-in was cancelled.';
+      final String message =
+          result.message ?? 'Facebook sign-in was cancelled.';
       throw StateError(message);
     }
 
@@ -199,16 +189,12 @@ class FirebaseAuthRepository implements AuthRepository {
     await _auth.signInWithProvider(provider);
   }
 
-  Future<void> _ensureGoogleSignInInitialized({
-    String? serverClientId,
-  }) async {
+  Future<void> _ensureGoogleSignInInitialized({String? serverClientId}) async {
     if (_googleSignInInitialized) {
       return;
     }
 
-    await GoogleSignIn.instance.initialize(
-      serverClientId: serverClientId,
-    );
+    await GoogleSignIn.instance.initialize(serverClientId: serverClientId);
     _googleSignInInitialized = true;
   }
 
@@ -270,10 +256,7 @@ class FirebaseAuthRepository implements AuthRepository {
           'linkedProviders': mergedLinkedProviders,
         },
       );
-    } catch (error, stackTrace) {
-      debugPrint('MongoDB profile sync failed, falling back to Firestore.');
-      debugPrint('$error');
-      debugPrint('$stackTrace');
+    } catch (_) {
       await _syncProfileWithFirestore(user, payload);
     }
   }
@@ -290,22 +273,20 @@ class FirebaseAuthRepository implements AuthRepository {
           .map((dynamic item) => item.toString()),
     }.where((String item) => item.isNotEmpty).toList();
 
-    await _users.doc(user.uid).set(
-      <String, dynamic>{
-        'firebaseUid': user.uid,
-        'createdAt': FieldValue.serverTimestamp(),
-        ...payload,
-        'linkedProviders': mergedLinkedProviders,
-      },
-      SetOptions(merge: true),
-    );
+    await _users.doc(user.uid).set(<String, dynamic>{
+      'firebaseUid': user.uid,
+      'createdAt': FieldValue.serverTimestamp(),
+      ...payload,
+      'linkedProviders': mergedLinkedProviders,
+    }, SetOptions(merge: true));
   }
 
   Future<AppUser?> _mapFirebaseUser(User user) async {
     if (_useMongoBackend) {
       try {
-        final DocumentSnapshot<Map<String, dynamic>> snapshot =
-            await _users.doc(user.uid).get();
+        final DocumentSnapshot<Map<String, dynamic>> snapshot = await _users
+            .doc(user.uid)
+            .get();
         final Map<String, dynamic>? firestoreData = snapshot.data();
         if (firestoreData != null) {
           await _syncProfileWithBackend(
@@ -318,30 +299,21 @@ class FirebaseAuthRepository implements AuthRepository {
         if (idToken == null || idToken.isEmpty) {
           throw StateError('Firebase did not return an ID token.');
         }
-        final Map<String, dynamic> data =
-            await _backendProfileClient!.loadCurrentUserProfile(
-          idToken: idToken,
-        );
+        final Map<String, dynamic> data = await _backendProfileClient!
+            .loadCurrentUserProfile(idToken: idToken);
         return _appUserFromMap(user, data);
-      } catch (error, stackTrace) {
-        debugPrint('MongoDB profile load failed, falling back to Firestore.');
-        debugPrint('$error');
-        debugPrint('$stackTrace');
-      }
+      } catch (_) {}
     }
 
     try {
-      final DocumentSnapshot<Map<String, dynamic>> snapshot =
-          await _users.doc(user.uid).get();
+      final DocumentSnapshot<Map<String, dynamic>> snapshot = await _users
+          .doc(user.uid)
+          .get();
       final Map<String, dynamic>? data = snapshot.data();
       if (data != null) {
         return _appUserFromMap(user, data);
       }
-    } catch (error, stackTrace) {
-      debugPrint('Firestore profile load failed, using Firebase defaults.');
-      debugPrint('$error');
-      debugPrint('$stackTrace');
-    }
+    } catch (_) {}
 
     return _defaultAppUser(user);
   }
@@ -358,29 +330,28 @@ class FirebaseAuthRepository implements AuthRepository {
       'stream': data['stream']?.toString() ?? 'Science',
       'avatarUrl': data['avatarUrl']?.toString() ?? user.photoURL,
       'authProvider':
-          data['authProvider']?.toString() ?? _providerIdFor(user, fallback: 'password'),
+          data['authProvider']?.toString() ??
+          _providerIdFor(user, fallback: 'password'),
       'streakDays': (data['streakDays'] as num?)?.toInt() ?? 0,
       'completedQuestions': (data['completedQuestions'] as num?)?.toInt() ?? 0,
       'bookmarkedPapers': (data['bookmarkedPapers'] as num?)?.toInt() ?? 0,
       'isFirebaseAccount': data['isFirebaseAccount'] as bool? ?? true,
-      'linkedProviders': (data['linkedProviders'] as List<dynamic>? ?? const <dynamic>[])
-          .map((dynamic item) => item.toString())
-          .where((String item) => item.isNotEmpty)
-          .toList(),
+      'linkedProviders':
+          (data['linkedProviders'] as List<dynamic>? ?? const <dynamic>[])
+              .map((dynamic item) => item.toString())
+              .where((String item) => item.isNotEmpty)
+              .toList(),
     };
   }
 
-  AppUser _appUserFromMap(
-    User user,
-    Map<String, dynamic> data,
-  ) {
-    final String providerId = data['authProvider']?.toString() ??
+  AppUser _appUserFromMap(User user, Map<String, dynamic> data) {
+    final String providerId =
+        data['authProvider']?.toString() ??
         _providerIdFor(user, fallback: 'password');
 
     return AppUser(
       uid: data['firebaseUid']?.toString() ?? user.uid,
-      name:
-          data['name']?.toString() ?? user.displayName ?? 'AcadMate Student',
+      name: data['name']?.toString() ?? user.displayName ?? 'AcadMate Student',
       email: data['email']?.toString() ?? user.email ?? '',
       grade: data['grade']?.toString() ?? 'A/L',
       stream: data['stream']?.toString() ?? 'Science',
