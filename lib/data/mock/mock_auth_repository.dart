@@ -127,4 +127,30 @@ class MockAuthRepository implements AuthRepository {
     _currentUser = null;
     _stateController.add(null);
   }
+
+  @override
+  Future<void> sendOtp({required String email, required String type}) async {
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+  }
+
+  @override
+  Future<void> verifyOtp({
+    required String email,
+    required String code,
+    required String type,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    if (code != '123456') {
+      throw Exception('Invalid verification code');
+    }
+  }
+
+  @override
+  Future<void> resetPasswordWithOtp({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+  }
 }

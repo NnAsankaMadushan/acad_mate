@@ -7,10 +7,11 @@ class AppConfig {
   );
   static const bool requestedMongoBackend = bool.fromEnvironment(
     'USE_MONGO_BACKEND',
-    defaultValue: false,
+    defaultValue: true,
   );
   static const String mongoBackendBaseUrl = String.fromEnvironment(
     'MONGO_BACKEND_BASE_URL',
+    defaultValue: 'http://192.168.43.27:3000',
   );
   static const String googleServerClientId = String.fromEnvironment(
     'GOOGLE_SERVER_CLIENT_ID',

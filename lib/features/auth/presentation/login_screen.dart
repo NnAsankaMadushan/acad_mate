@@ -39,22 +39,55 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
 
-    await _runAuthAction((AuthRepository repo) async {
-      if (_isSignIn) {
+    if (_isSignIn) {
+      await _runAuthAction((AuthRepository repo) async {
         await repo.signIn(
           email: _emailController.text,
           password: _passwordController.text,
         );
-      } else {
-        await repo.register(
-          name: _nameController.text,
-          email: _emailController.text,
-          password: _passwordController.text,
-          grade: 'A/L',
-          stream: 'Science',
-        );
+      });
+    } else {
+      // Sign up flow with OTP
+      final String email = _emailController.text.trim();
+      final String name = _nameController.text.trim();
+      final String password = _passwordController.text;
+
+      setState(() => _isBusy = true);
+      try {
+        final AuthRepository repo = ref.read(authRepositoryProvider);
+        await repo.sendOtp(email: email, type: 'signup');
+        if (!mounted) {
+          return;
+        }
+
+        final String? otp = await _showOtpDialog(email, 'signup');
+        if (otp == null || otp.trim().isEmpty) {
+          setState(() => _isBusy = false);
+          return;
+        }
+
+        await repo.verifyOtp(email: email, code: otp, type: 'signup');
+
+        // Now register
+        await _runAuthAction((AuthRepository repo) async {
+          await repo.register(
+            name: name,
+            email: email,
+            password: password,
+            grade: 'A/L',
+            stream: 'Science',
+          );
+        });
+      } catch (error) {
+        if (!mounted) {
+          return;
+        }
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.toString())));
+        setState(() => _isBusy = false);
       }
-    });
+    }
   }
 
   Future<void> _signInWithProvider(SocialAuthProvider provider) async {
@@ -93,30 +126,46 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _forgotPassword() async {
     final email = _emailController.text.trim();
-    if (email.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Enter your email first.')));
-      return;
-    }
-
-    try {
-      await ref.read(authRepositoryProvider).sendPasswordResetEmail(email);
-      if (!mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password reset email sent.')),
-      );
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
-    }
+    context.push('/recover-password?email=$email');
   }
+
+  Future<String?> _showOtpDialog(String email, String type) async {
+    final TextEditingController otpController = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Verify Email'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('A verification code has been sent to $email'),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: otpController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Enter OTP',
+                    hintText: '6-digit code',
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, otpController.text),
+                child: const Text('Verify'),
+              ),
+            ],
+          ),
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {

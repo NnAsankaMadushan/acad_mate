@@ -107,6 +107,42 @@ class FirebaseAuthRepository implements AuthRepository {
     return _auth.signOut();
   }
 
+  @override
+  Future<void> sendOtp({required String email, required String type}) async {
+    if (_backendProfileClient == null) {
+      throw StateError('Backend client not initialized.');
+    }
+    await _backendProfileClient!.sendOtp(email: email, type: type);
+  }
+
+  @override
+  Future<void> verifyOtp({
+    required String email,
+    required String code,
+    required String type,
+  }) async {
+    if (_backendProfileClient == null) {
+      throw StateError('Backend client not initialized.');
+    }
+    await _backendProfileClient!.verifyOtp(email: email, code: code, type: type);
+  }
+
+  @override
+  Future<void> resetPasswordWithOtp({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    if (_backendProfileClient == null) {
+      throw StateError('Backend client not initialized.');
+    }
+    await _backendProfileClient!.resetPassword(
+      email: email,
+      code: code,
+      newPassword: newPassword,
+    );
+  }
+
   Future<void> _signInWithGoogle() async {
     if (kIsWeb) {
       final GoogleAuthProvider provider = GoogleAuthProvider()

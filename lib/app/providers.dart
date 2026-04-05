@@ -1,4 +1,5 @@
 import 'package:acad_mate/core/config/app_config.dart';
+import 'package:acad_mate/data/backend/backend_academic_repository.dart';
 import 'package:acad_mate/data/backend/backend_profile_client.dart';
 import 'package:acad_mate/data/firebase/firebase_academic_repository.dart';
 import 'package:acad_mate/data/firebase/firebase_auth_repository.dart';
@@ -35,6 +36,12 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 });
 
 final academicRepositoryProvider = Provider<AcademicRepository>((ref) {
+  if (AppConfig.useMongoBackend) {
+    return BackendAcademicRepository(
+      baseUrl: AppConfig.mongoBackendBaseUrl,
+    );
+  }
+
   if (AppConfig.firebaseReady) {
     return FirebaseAcademicRepository();
   }

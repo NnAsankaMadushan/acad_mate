@@ -1,4 +1,6 @@
 import 'package:acad_mate/features/auth/presentation/login_screen.dart';
+import 'package:acad_mate/features/auth/presentation/recover_password_screen.dart';
+import 'package:acad_mate/features/auth/presentation/reset_password_screen.dart';
 import 'package:acad_mate/features/papers/presentation/past_paper_viewer_screen.dart';
 import 'package:acad_mate/features/quiz/presentation/quiz_session_screen.dart';
 import 'package:acad_mate/features/splash/presentation/splash_screen.dart';
@@ -28,6 +30,26 @@ final routerProvider = Provider<GoRouter>((ref) {
           state,
           const LoginScreen(),
         ),
+      ),
+      GoRoute(
+        path: '/recover-password',
+        pageBuilder: (context, state) {
+          final queryParams = state.uri.queryParameters;
+          return _fadePage(
+            state,
+            RecoverPasswordScreen(initialEmail: queryParams['email']),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/reset-password',
+        pageBuilder: (context, state) {
+          final queryParams = state.uri.queryParameters;
+          return _fadePage(
+            state,
+            ResetPasswordScreen(email: queryParams['email']),
+          );
+        },
       ),
       GoRoute(
         path: '/app',

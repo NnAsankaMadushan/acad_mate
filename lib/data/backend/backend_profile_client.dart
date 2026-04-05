@@ -41,6 +41,64 @@ class BackendProfileClient {
     return _decodeObjectResponse(response);
   }
 
+  Future<void> sendOtp({
+    required String email,
+    required String type,
+  }) async {
+    final http.Response response = await _client.post(
+      _uri('/auth/send-otp'),
+      headers: <String, String>{
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(<String, String>{
+        'email': email,
+        'type': type,
+      }),
+    );
+    _decodeObjectResponse(response);
+  }
+
+  Future<void> verifyOtp({
+    required String email,
+    required String code,
+    required String type,
+  }) async {
+    final http.Response response = await _client.post(
+      _uri('/auth/verify-otp'),
+      headers: <String, String>{
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(<String, String>{
+        'email': email,
+        'code': code,
+        'type': type,
+      }),
+    );
+    _decodeObjectResponse(response);
+  }
+
+  Future<void> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    final http.Response response = await _client.post(
+      _uri('/auth/reset-password'),
+      headers: <String, String>{
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(<String, String>{
+        'email': email,
+        'code': code,
+        'newPassword': newPassword,
+      }),
+    );
+    _decodeObjectResponse(response);
+  }
+
   void close() {
     _client.close();
   }
