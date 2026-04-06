@@ -134,6 +134,37 @@ class MockAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<Map<String, dynamic>> submitQuizResult({
+    required String quizId,
+    required int score,
+    required int total,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    if (_currentUser == null) {
+      throw StateError('No authenticated user.');
+    }
+    if (score == total) {
+      final List<String> completedQuizIds = <String>[..._currentUser!.completedQuizIds];
+      if (!completedQuizIds.contains(quizId)) {
+        completedQuizIds.add(quizId);
+      }
+      _currentUser = _currentUser!.copyWith(
+        completedQuestions: _currentUser!.completedQuestions + total,
+        completedQuizIds: completedQuizIds,
+      );
+    } else {
+      _currentUser = _currentUser!.copyWith(
+        completedQuestions: _currentUser!.completedQuestions + total,
+      );
+    }
+    _stateController.add(_currentUser);
+    return <String, dynamic>{
+      'completedQuestions': _currentUser!.completedQuestions,
+      'completedQuizIds': _currentUser!.completedQuizIds,
+    };
+  }
+
+  @override
   Future<void> verifyOtp({
     required String email,
     required String code,

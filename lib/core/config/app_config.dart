@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 class AppConfig {
   static const String appName = 'AcadMate';
   static const String tagline = 'Learn smarter. Practice faster.';
@@ -9,10 +11,7 @@ class AppConfig {
     'USE_MONGO_BACKEND',
     defaultValue: true,
   );
-  static const String mongoBackendBaseUrl = String.fromEnvironment(
-    'MONGO_BACKEND_BASE_URL',
-    defaultValue: 'http://192.168.43.27:3000',
-  );
+  static final String mongoBackendBaseUrl = _resolveMongoBackendBaseUrl();
   static const String googleServerClientId = String.fromEnvironment(
     'GOOGLE_SERVER_CLIENT_ID',
   );
@@ -26,4 +25,21 @@ class AppConfig {
 
   static bool get useMongoBackend =>
       requestedMongoBackend && firebaseReady && mongoBackendReady;
+
+  static String _resolveMongoBackendBaseUrl() {
+    const String envUrl = String.fromEnvironment('MONGO_BACKEND_BASE_URL');
+    if (envUrl.trim().isNotEmpty) {
+      return envUrl.trim().replaceFirst(RegExp(r'/$'), '');
+    }
+
+    if (kIsWeb) {
+      return 'http://localhost:3000';
+    }
+
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return 'http://192.168.1.156:3000';
+    }
+
+    return 'http://localhost:3000';
+  }
 }

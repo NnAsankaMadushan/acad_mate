@@ -68,7 +68,11 @@ class BackendAcademicRepository implements AcademicRepository {
     );
 
     final List<dynamic> data = _decodeListResponse(response);
-    return data.map((dynamic item) => PastPaper.fromMap(item as Map<String, dynamic>)).toList();
+    return data.map((dynamic item) {
+      final Map<String, dynamic> map = Map<String, dynamic>.from(item as Map);
+      _resolvePdfUrl(map);
+      return PastPaper.fromMap(map);
+    }).toList();
   }
 
   @override
@@ -80,8 +84,16 @@ class BackendAcademicRepository implements AcademicRepository {
     );
 
     if (response.statusCode == 404) return null;
-    final Map<String, dynamic> data = _decodeObjectResponse(response);
-    return PastPaper.fromMap(data);
+    final Map<String, dynamic> map = _decodeObjectResponse(response);
+    _resolvePdfUrl(map);
+    return PastPaper.fromMap(map);
+  }
+
+  void _resolvePdfUrl(Map<String, dynamic> map) {
+    final String? pdfUrl = map['pdfUrl']?.toString();
+    if (pdfUrl != null && pdfUrl.startsWith('/')) {
+      map['pdfUrl'] = _uri(pdfUrl).toString();
+    }
   }
 
   Uri _uri(String path) {

@@ -66,319 +66,307 @@ class MockAcademicRepository implements AcademicRepository {
 const String _samplePdf =
     'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
 
-const List<QuestionSet> _sampleQuestionSets = <QuestionSet>[
-  QuestionSet(
-    id: 'ol_maths_linear',
-    title: 'O/L Mathematics - Linear Equations',
-    grade: 'O/L',
-    subject: 'Mathematics',
-    stream: 'All',
-    topic: 'Algebra Basics',
-    description:
-        'Build confidence with short, exam-style questions on linear equations and number operations.',
+final List<QuestionSet> _sampleQuestionSets = _generateSampleQuestionSets();
+
+List<QuestionSet> _generateSampleQuestionSets() {
+  const List<String> primaryGrades = <String>[
+    'Grade 1',
+    'Grade 2',
+    'Grade 3',
+    'Grade 4',
+    'Grade 5',
+    'Grade 6',
+    'Grade 7',
+    'Grade 8',
+    'Grade 9',
+  ];
+
+  const List<String> primarySubjects = <String>[
+    'Mathematics',
+    'Science',
+    'English',
+    'Sinhala',
+    'Tamil',
+    'Religion',
+    'Environmental Studies',
+  ];
+
+  const List<String> olSubjects = <String>[
+    'Mathematics',
+    'Science',
+    'English',
+    'History',
+    'Geography',
+    'ICT',
+  ];
+
+  const Map<String, List<String>> alStreams = <String, List<String>>{
+    'Science': ['Physics', 'Chemistry', 'Biology', 'Combined Maths', 'ICT'],
+    'Commerce': ['Accounting', 'Business Studies', 'Economics', 'Information Systems', 'ICT'],
+    'Arts': ['History', 'Geography', 'Political Science', 'Logic', 'Sinhala'],
+    'Technology': ['Science for Technology', 'Engineering Technology', 'ICT', 'Agriculture'],
+  };
+
+  final Map<String, Map<String, String>> subjectPracticeData = <String, Map<String, String>>{
+    'Mathematics': {
+      'topic': 'Numbers & shapes',
+      'answer': 'equations',
+      'tool': 'calculator',
+      'activity': 'solving problems',
+    },
+    'Science': {
+      'topic': 'Experiments & observation',
+      'answer': 'experiments',
+      'tool': 'laboratory',
+      'activity': 'reviewing diagrams',
+    },
+    'English': {
+      'topic': 'Grammar & writing',
+      'answer': 'sentences',
+      'tool': 'dictionary',
+      'activity': 'reading passages',
+    },
+    'Sinhala': {
+      'topic': 'Language skills',
+      'answer': 'sentences',
+      'tool': 'textbook',
+      'activity': 'reading passages',
+    },
+    'Tamil': {
+      'topic': 'Language skills',
+      'answer': 'sentences',
+      'tool': 'textbook',
+      'activity': 'reading passages',
+    },
+    'Religion': {
+      'topic': 'Beliefs & values',
+      'answer': 'faith',
+      'tool': 'scripture',
+      'activity': 'thinking about stories',
+    },
+    'Environmental Studies': {
+      'topic': 'Nature & conservation',
+      'answer': 'ecosystem',
+      'tool': 'fieldwork',
+      'activity': 'observing nature',
+    },
+    'History': {
+      'topic': 'Events & timelines',
+      'answer': 'independence',
+      'tool': 'archive',
+      'activity': 'reviewing dates',
+    },
+    'Geography': {
+      'topic': 'Maps & places',
+      'answer': 'maps',
+      'tool': 'compass',
+      'activity': 'studying locations',
+    },
+    'ICT': {
+      'topic': 'Computers & systems',
+      'answer': 'software',
+      'tool': 'computer',
+      'activity': 'solving logic puzzles',
+    },
+    'Physics': {
+      'topic': 'Forces & motion',
+      'answer': 'forces',
+      'tool': 'meter stick',
+      'activity': 'solving problems',
+    },
+    'Chemistry': {
+      'topic': 'Matter & reactions',
+      'answer': 'atoms',
+      'tool': 'test tube',
+      'activity': 'balancing equations',
+    },
+    'Biology': {
+      'topic': 'Living systems',
+      'answer': 'cells',
+      'tool': 'microscope',
+      'activity': 'labeling parts',
+    },
+    'Combined Maths': {
+      'topic': 'Algebra & geometry',
+      'answer': 'functions',
+      'tool': 'graph paper',
+      'activity': 'solving formulas',
+    },
+    'Accounting': {
+      'topic': 'Ledgers & records',
+      'answer': 'ledger',
+      'tool': 'calculator',
+      'activity': 'recording transactions',
+    },
+    'Business Studies': {
+      'topic': 'Business planning',
+      'answer': 'marketing',
+      'tool': 'spreadsheet',
+      'activity': 'reviewing examples',
+    },
+    'Economics': {
+      'topic': 'Markets & money',
+      'answer': 'demand',
+      'tool': 'graph',
+      'activity': 'studying supply curves',
+    },
+    'Information Systems': {
+      'topic': 'Information flow',
+      'answer': 'database',
+      'tool': 'computer',
+      'activity': 'reviewing systems',
+    },
+    'Political Science': {
+      'topic': 'Governments & power',
+      'answer': 'government',
+      'tool': 'constitution',
+      'activity': 'studying systems',
+    },
+    'Logic': {
+      'topic': 'Reasoning & argument',
+      'answer': 'deduction',
+      'tool': 'proof',
+      'activity': 'solving puzzles',
+    },
+    'Science for Technology': {
+      'topic': 'Applied science',
+      'answer': 'materials',
+      'tool': 'measurement tools',
+      'activity': 'reviewing devices',
+    },
+    'Engineering Technology': {
+      'topic': 'Machines & systems',
+      'answer': 'circuits',
+      'tool': 'toolkit',
+      'activity': 'reviewing blueprints',
+    },
+    'Agriculture': {
+      'topic': 'Farming & growth',
+      'answer': 'crops',
+      'tool': 'tractor',
+      'activity': 'studying soil',
+    },
+  };
+
+  final List<QuestionSet> sets = <QuestionSet>[];
+
+  for (final String grade in primaryGrades) {
+    for (final String subject in primarySubjects) {
+      sets.add(_buildQuestionSet(grade, subject, 'All', subjectPracticeData));
+    }
+  }
+
+  for (final String subject in olSubjects) {
+    sets.add(_buildQuestionSet('O/L', subject, 'All', subjectPracticeData));
+  }
+
+  for (final String stream in alStreams.keys) {
+    for (final String subject in alStreams[stream]!) {
+      sets.add(_buildQuestionSet('A/L', subject, stream, subjectPracticeData));
+    }
+  }
+
+  return sets;
+}
+
+QuestionSet _buildQuestionSet(
+  String grade,
+  String subject,
+  String stream,
+  Map<String, Map<String, String>> practiceData,
+) {
+  final Map<String, String> details = practiceData[subject] ?? <String, String>{
+    'topic': 'Core concepts',
+    'answer': 'principles',
+    'tool': 'materials',
+    'activity': 'working examples',
+  };
+
+  return QuestionSet(
+    id: '${grade.toLowerCase()}_${stream.toLowerCase()}_${subject.toLowerCase().replaceAll(' ', '_')}',
+    title: '$grade $subject - Quick Practice',
+    grade: grade,
+    subject: subject,
+    stream: stream,
+    topic: details['topic']!,
+    description: 'Practice the fundamentals of $subject for $grade${stream != 'All' ? ' ($stream)' : ''}.',
     estimatedMinutes: 8,
-    rating: 4.8,
-    badge: 'Popular',
-    accentColorValue: 0xFF1A63E8,
-    isFeatured: true,
-    questions: <Question>[
-      Question(
-        id: 'q1',
-        prompt: 'Solve 2x + 5 = 13.',
-        options: <String>['x = 2', 'x = 4', 'x = 6', 'x = 8'],
-        correctIndex: 1,
-        explanation: '2x = 8, so x = 4.',
-      ),
-      Question(
-        id: 'q2',
-        prompt: 'What is 10% of 200?',
-        options: <String>['10', '15', '20', '25'],
-        correctIndex: 2,
-        explanation: '10% of 200 is 20.',
-      ),
-      Question(
-        id: 'q3',
-        prompt: 'Area of a rectangle with length 8 and width 3?',
-        options: <String>['11', '21', '24', '27'],
-        correctIndex: 2,
-        explanation: 'Area = 8 × 3 = 24.',
-      ),
-      Question(
-        id: 'q4',
-        prompt: 'If x = -3, what is x2?',
-        options: <String>['-9', '0', '3', '9'],
-        correctIndex: 3,
-        explanation: '(-3)² = 9.',
-      ),
-    ],
-  ),
-  QuestionSet(
-    id: 'ol_english_grammar',
-    title: 'O/L English - Grammar Sprint',
-    grade: 'O/L',
-    subject: 'English',
-    stream: 'All',
-    topic: 'Grammar',
-    description:
-        'Sharpen verb forms, prepositions, and sentence structure with fast-paced practice.',
-    estimatedMinutes: 7,
-    rating: 4.6,
-    badge: 'New',
-    accentColorValue: 0xFFFF8A00,
-    questions: <Question>[
-      Question(
-        id: 'q1',
-        prompt: 'Choose the correct sentence.',
-        options: <String>[
-          'She go to school every day.',
-          'She goes to school every day.',
-          'She going to school every day.',
-          'She gone to school every day.',
-        ],
-        correctIndex: 1,
-        explanation: 'Third person singular needs "goes".',
-      ),
-      Question(
-        id: 'q2',
-        prompt: 'Select the correct preposition: The book is ___ the table.',
-        options: <String>['on', 'in', 'at', 'by'],
-        correctIndex: 0,
-        explanation: 'Use "on" for surface placement.',
-      ),
-      Question(
-        id: 'q3',
-        prompt: 'Identify the adjective.',
-        options: <String>['quickly', 'blue', 'run', 'beyond'],
-        correctIndex: 1,
-        explanation: '"Blue" describes a noun, so it is an adjective.',
-      ),
-      Question(
-        id: 'q4',
-        prompt: 'Choose the correct plural form of "child".',
-        options: <String>['childs', 'childes', 'children', 'childrens'],
-        correctIndex: 2,
-        explanation: 'The irregular plural is children.',
-      ),
-    ],
-  ),
-  QuestionSet(
-    id: 'al_physics_mechanics',
-    title: 'A/L Physics - Mechanics Focus',
-    grade: 'A/L',
-    subject: 'Physics',
-    stream: 'Science',
-    topic: 'Mechanics',
-    description:
-        'Practice motion, forces, and energy with targeted science-stream questions.',
-    estimatedMinutes: 12,
-    rating: 4.9,
-    badge: 'Top Pick',
-    accentColorValue: 0xFF31C48D,
-    isFeatured: true,
-    questions: <Question>[
-      Question(
-        id: 'q1',
-        prompt: 'A force of 10 N acts on a 2 kg mass. Acceleration?',
-        options: <String>['2 m/s²', '5 m/s²', '10 m/s²', '20 m/s²'],
-        correctIndex: 1,
-        explanation: 'a = F / m = 10 / 2 = 5 m/s².',
-      ),
-      Question(
-        id: 'q2',
-        prompt: 'The unit of work is:',
-        options: <String>['Watt', 'Newton', 'Joule', 'Pascal'],
-        correctIndex: 2,
-        explanation: 'Work is measured in joules.',
-      ),
-      Question(
-        id: 'q3',
-        prompt: 'Which quantity is a vector?',
-        options: <String>['Speed', 'Mass', 'Distance', 'Velocity'],
-        correctIndex: 3,
-        explanation: 'Velocity has magnitude and direction.',
-      ),
-      Question(
-        id: 'q4',
-        prompt: 'Momentum equals:',
-        options: <String>['m × v', 'F × t', 'm ÷ v', 'v ÷ t'],
-        correctIndex: 0,
-        explanation: 'Momentum = mass × velocity.',
-      ),
-    ],
-  ),
-  QuestionSet(
-    id: 'al_accounting_ledgers',
-    title: 'A/L Accounting - Ledgers & Books',
-    grade: 'A/L',
-    subject: 'Accounting',
-    stream: 'Commerce',
-    topic: 'Bookkeeping',
-    description:
-        'Reinforce double-entry bookkeeping, ledgers, and trial balance logic.',
-    estimatedMinutes: 10,
-    rating: 4.7,
-    badge: 'Trending',
-    accentColorValue: 0xFFF59E0B,
-    questions: <Question>[
-      Question(
-        id: 'q1',
-        prompt: 'A debit balance in cash book means:',
-        options: <String>[
-          'Overdraft',
-          'Cash at bank',
-          'Suspense item',
-          'Credit note',
-        ],
-        correctIndex: 1,
-        explanation: 'A debit cash balance is cash at bank or in hand.',
-      ),
-      Question(
-        id: 'q2',
-        prompt: 'The accounting equation is:',
-        options: <String>[
-          'Assets = Liabilities + Equity',
-          'Assets = Income + Expenses',
-          'Revenue = Assets - Liabilities',
-          'Capital = Revenue + Expenses',
-        ],
-        correctIndex: 0,
-        explanation: 'Assets equal liabilities plus equity.',
-      ),
-      Question(
-        id: 'q3',
-        prompt: 'Which book records credit sales?',
-        options: <String>[
-          'Sales day book',
-          'Purchases day book',
-          'Cash book',
-          'General journal',
-        ],
-        correctIndex: 0,
-        explanation: 'Credit sales are recorded in the sales day book.',
-      ),
-      Question(
-        id: 'q4',
-        prompt: 'Trial balance is prepared to check:',
-        options: <String>[
-          'Only profits',
-          'Arithmetic accuracy',
-          'Tax liability',
-          'Cash flow',
-        ],
-        correctIndex: 1,
-        explanation: 'It checks the arithmetic accuracy of ledger balances.',
-      ),
-    ],
-  ),
-  QuestionSet(
-    id: 'al_history_nation',
-    title: 'A/L History - Nation Building',
-    grade: 'A/L',
-    subject: 'History',
-    stream: 'Arts',
-    topic: 'Sri Lanka',
-    description:
-        'A focused set on social change, independence, and post-colonial developments.',
-    estimatedMinutes: 11,
     rating: 4.5,
-    badge: 'Study',
-    accentColorValue: 0xFF8B5CF6,
-    questions: <Question>[
-      Question(
-        id: 'q1',
-        prompt: 'Sri Lanka gained independence in:',
-        options: <String>['1945', '1948', '1956', '1972'],
-        correctIndex: 1,
-        explanation: 'Sri Lanka became independent in 1948.',
-      ),
-      Question(
-        id: 'q2',
-        prompt: 'The Mahavamsa is primarily a:',
-        options: <String>[
-          'Trade manual',
-          'Chronicle',
-          'Law code',
-          'Travel diary',
-        ],
-        correctIndex: 1,
-        explanation: 'Mahavamsa is an ancient chronicle of Sri Lankan history.',
-      ),
-      Question(
-        id: 'q3',
-        prompt: 'A major theme after independence was:',
-        options: <String>[
-          'Colonial expansion',
-          'Nation building',
-          'Industrial abolition',
-          'Monarchy restoration',
-        ],
-        correctIndex: 1,
-        explanation: 'The country focused on nation building and reform.',
-      ),
-      Question(
-        id: 'q4',
-        prompt: 'The official language policy changed notably in:',
-        options: <String>['1931', '1948', '1956', '1978'],
-        correctIndex: 2,
-        explanation: 'The 1956 policy shift is a major milestone.',
-      ),
-    ],
-  ),
-  QuestionSet(
-    id: 'al_ict_networks',
-    title: 'A/L ICT - Networks & Security',
-    grade: 'A/L',
-    subject: 'ICT',
-    stream: 'Technology',
-    topic: 'Networks',
-    description:
-        'Cover protocols, security, and internet basics in a clean, exam-focused format.',
-    estimatedMinutes: 9,
-    rating: 4.8,
-    badge: 'Hot',
-    accentColorValue: 0xFF1A63E8,
-    questions: <Question>[
-      Question(
-        id: 'q1',
-        prompt: 'Which device forwards packets between networks?',
-        options: <String>['Switch', 'Router', 'Printer', 'Hub'],
-        correctIndex: 1,
-        explanation: 'Routers forward packets between networks.',
-      ),
-      Question(
-        id: 'q2',
-        prompt: 'HTTPS primarily uses which protocol for security?',
-        options: <String>['TLS', 'FTP', 'SMTP', 'SNMP'],
-        correctIndex: 0,
-        explanation: 'HTTPS is secured with TLS.',
-      ),
-      Question(
-        id: 'q3',
-        prompt: 'What does DNS do?',
-        options: <String>[
-          'Compresses files',
-          'Maps domain names to IP addresses',
-          'Encrypts emails',
-          'Stores user photos',
-        ],
-        correctIndex: 1,
-        explanation: 'DNS resolves domain names into IP addresses.',
-      ),
-      Question(
-        id: 'q4',
-        prompt: 'A strong password should include:',
-        options: <String>[
-          'Only letters',
-          'Only numbers',
-          'A mix of characters',
-          'Your name',
-        ],
-        correctIndex: 2,
-        explanation: 'A mix of letters, numbers, and symbols is stronger.',
-      ),
-    ],
-  ),
-];
+    badge: grade == 'A/L' ? 'Top Pick' : grade == 'O/L' ? 'Practice' : 'Starter',
+    accentColorValue: _accentColor(subject),
+    isFeatured: grade == 'A/L',
+    questions: _buildQuestions(subject, details),
+  );
+}
+
+int _accentColor(String subject) {
+  const List<int> colors = <int>[
+    0xFF1A63E8,
+    0xFFFF8A00,
+    0xFF31C48D,
+    0xFFF59E0B,
+    0xFF8B5CF6,
+    0xFFEF4444,
+    0xFF0EA5E9,
+  ];
+  return colors[subject.length % colors.length];
+}
+
+List<Question> _buildQuestions(
+  String subject,
+  Map<String, String> details,
+) {
+  return <Question>[
+    Question(
+      id: 'q1',
+      prompt: 'Which term is most related to $subject?',
+      options: <String>[
+        details['answer']!,
+        'sentence',
+        'graph',
+        'balance sheet',
+      ],
+      correctIndex: 0,
+      explanation: '${details['answer']} is a key idea in $subject.',
+    ),
+    Question(
+      id: 'q2',
+      prompt: '$subject practice often includes questions about:',
+      options: <String>[
+        details['topic']!,
+        'poetry',
+        'elections',
+        'accounts',
+      ],
+      correctIndex: 0,
+      explanation: '${details['topic']} is a core $subject theme.',
+    ),
+    Question(
+      id: 'q3',
+      prompt: 'Which tool is commonly used in $subject?',
+      options: <String>[
+        details['tool']!,
+        'brush',
+        'ruler',
+        'notebook',
+      ],
+      correctIndex: 0,
+      explanation: '${details['tool']} is closely associated with $subject.',
+    ),
+    Question(
+      id: 'q4',
+      prompt: 'To improve in $subject, you should practice:',
+      options: <String>[
+        details['activity']!,
+        'drawing',
+        'memorizing dates',
+        'cooking',
+      ],
+      correctIndex: 0,
+      explanation: '${details['activity']} helps strengthen $subject skills.',
+    ),
+  ];
+}
 
 const List<PastPaper> _samplePastPapers = <PastPaper>[
   PastPaper(

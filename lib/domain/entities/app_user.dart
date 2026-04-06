@@ -10,6 +10,8 @@ class AppUser {
     this.streakDays = 0,
     this.completedQuestions = 0,
     this.bookmarkedPapers = 0,
+    this.completedQuizIds = const [],
+    this.quizResults = const [],
     this.isFirebaseAccount = false,
   });
 
@@ -23,6 +25,8 @@ class AppUser {
   final int streakDays;
   final int completedQuestions;
   final int bookmarkedPapers;
+  final List<String> completedQuizIds;
+  final List<QuizResult> quizResults;
   final bool isFirebaseAccount;
 
   AppUser copyWith({
@@ -36,6 +40,8 @@ class AppUser {
     int? streakDays,
     int? completedQuestions,
     int? bookmarkedPapers,
+    List<String>? completedQuizIds,
+    List<QuizResult>? quizResults,
     bool? isFirebaseAccount,
   }) {
     return AppUser(
@@ -49,8 +55,26 @@ class AppUser {
       streakDays: streakDays ?? this.streakDays,
       completedQuestions: completedQuestions ?? this.completedQuestions,
       bookmarkedPapers: bookmarkedPapers ?? this.bookmarkedPapers,
+      completedQuizIds: completedQuizIds ?? this.completedQuizIds,
+      quizResults: quizResults ?? this.quizResults,
       isFirebaseAccount: isFirebaseAccount ?? this.isFirebaseAccount,
     );
   }
+}
+
+class QuizResult {
+  const QuizResult({
+    required this.quizId,
+    required this.score,
+    required this.total,
+    required this.completedAt,
+    required this.isPerfect,
+  });
+
+  final String quizId;
+  final int score;
+  final int total;
+  final DateTime completedAt;
+  final bool isPerfect;
 }
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:acad_mate/app/providers.dart';
 import 'package:acad_mate/core/theme/app_colors.dart';
 import 'package:acad_mate/core/widgets/glass_card.dart';
@@ -23,6 +25,9 @@ class _QuizSessionScreenState extends ConsumerState<QuizSessionScreen> {
   int _score = 0;
   bool _answered = false;
   bool _complete = false;
+  bool _resultSubmitted = false;
+  Duration? _remainingTime;
+  Timer? _quizTimer;
 
   void _selectAnswer(Question question, int optionIndex) {
     if (_answered || _complete) {
@@ -40,7 +45,9 @@ class _QuizSessionScreenState extends ConsumerState<QuizSessionScreen> {
 
   void _nextQuestion(QuestionSet set) {
     if (_index >= set.questions.length - 1) {
+      _stopTimer();
       setState(() => _complete = true);
+      _submitQuizResult(set);
       return;
     }
 
@@ -58,7 +65,85 @@ class _QuizSessionScreenState extends ConsumerState<QuizSessionScreen> {
       _score = 0;
       _answered = false;
       _complete = false;
+      _resultSubmitted = false;
+      _remainingTime = null;
     });
+    _stopTimer();
+  }
+
+  Future<void> _submitQuizResult(QuestionSet set) async {
+    if (_resultSubmitted || !mounted) {
+      return;
+    }
+
+    try {
+      final Map<String, dynamic> result = await ref
+          .read(authRepositoryProvider)
+          .submitQuizResult(
+            quizId: set.id,
+            score: _score,
+            total: set.questions.length,
+          );
+
+      if (mounted && result.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Quiz result saved to your profile.')),
+        );
+      }
+    } catch (_) {
+      // Ignore submission errors in the quiz flow.
+    } finally {
+      if (mounted) {
+        setState(() {
+          _resultSubmitted = true;
+        });
+      }
+    }
+  }
+
+  void _startTimer(QuestionSet set) {
+    _stopTimer();
+    _remainingTime = Duration(minutes: set.estimatedMinutes);
+    _quizTimer = Timer.periodic(const Duration(seconds: 1), (Timer timer) {
+      if (_remainingTime == null) {
+        timer.cancel();
+        return;
+      }
+
+      if (_remainingTime!.inSeconds <= 1) {
+        timer.cancel();
+        setState(() {
+          _remainingTime = Duration.zero;
+          _complete = true;
+        });
+        if (mounted) {
+          _submitQuizResult(set);
+        }
+        return;
+      }
+
+      setState(() {
+        _remainingTime = Duration(seconds: _remainingTime!.inSeconds - 1);
+      });
+    });
+  }
+
+  void _stopTimer() {
+    _quizTimer?.cancel();
+    _quizTimer = null;
+  }
+
+  @override
+  void dispose() {
+    _stopTimer();
+    super.dispose();
+  }
+
+  String _formatDuration(Duration duration) {
+    final int minutes = duration.inMinutes;
+    final int seconds = duration.inSeconds % 60;
+    String twoDigits(int value) => value.toString().padLeft(2, '0');
+    return '$minutes:${twoDigits(seconds)}';
   }
 
   @override
@@ -74,6 +159,14 @@ class _QuizSessionScreenState extends ConsumerState<QuizSessionScreen> {
               return const Center(
                 child: GlassCard(child: Text('Question set not found.')),
               );
+            }
+
+            if (_remainingTime == null && !_complete) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!_complete) {
+                  _startTimer(set);
+                }
+              });
             }
 
             if (_complete) {
@@ -104,6 +197,16 @@ class _QuizSessionScreenState extends ConsumerState<QuizSessionScreen> {
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        _remainingTime != null
+                            ? 'Time left: ${_formatDuration(_remainingTime!)}'
+                            : 'Estimated: ${set.estimatedMinutes} min',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppColors.textMuted,
+                              fontWeight: FontWeight.w600,
+                            ),
                       ),
                       const SizedBox(height: 16),
                       ClipRRect(

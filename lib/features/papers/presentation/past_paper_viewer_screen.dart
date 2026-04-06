@@ -21,22 +21,10 @@ class PastPaperViewerScreen extends ConsumerWidget {
     final paperAsync = ref.watch(pastPaperProvider(paperId));
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Past Paper'),
-        actions: <Widget>[
-          IconButton(
-            onPressed: () async {
-              final PastPaper? paper =
-                  await ref.read(pastPaperProvider(paperId).future);
-              if (paper != null && paper.pdfUrl.isNotEmpty) {
-                await launchUrl(
-                  Uri.parse(paper.pdfUrl),
-                  mode: LaunchMode.externalApplication,
-                );
-              }
-            },
-            icon: const Icon(Icons.open_in_new_rounded),
-          ),
-        ],
+        title: Text(
+          paperAsync.value?.title ?? 'Past Paper',
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
       body: GradientBackdrop(
         child: paperAsync.when(
@@ -51,48 +39,7 @@ class PastPaperViewerScreen extends ConsumerWidget {
 
             return Column(
               children: <Widget>[
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-                  child: GlassCard(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: <Widget>[
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            color: AppColors.secondary.withValues(alpha: 0.12),
-                          ),
-                          child: const Icon(
-                            Icons.picture_as_pdf_rounded,
-                            color: AppColors.secondary,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              Text(
-                                paper.title,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium
-                                    ?.copyWith(fontWeight: FontWeight.w800),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${paper.examType} • ${paper.year} • ${paper.pages} pages',
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                const SizedBox(height: 8),
                 Expanded(
                   child: Container(
                     margin: const EdgeInsets.fromLTRB(20, 0, 20, 18),

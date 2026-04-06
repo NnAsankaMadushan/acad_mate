@@ -112,7 +112,49 @@ class FirebaseAuthRepository implements AuthRepository {
     if (_backendProfileClient == null) {
       throw StateError('Backend client not initialized.');
     }
-    await _backendProfileClient!.sendOtp(email: email, type: type);
+    await _backendProfileClient.sendOtp(email: email, type: type);
+  }
+
+  @override
+  Future<Map<String, dynamic>> submitQuizResult({
+    required String quizId,
+    required int score,
+    required int total,
+  }) async {
+    if (_backendProfileClient == null) {
+      // If no backend client is configured, persist only to Firestore.
+      final User? user = _auth.currentUser;
+      if (user == null) {
+        throw StateError('No authenticated user.');
+      }
+      final List<String> completedQuizIds = <String>[];
+      if (score == total) {
+        completedQuizIds.add(quizId);
+      }
+      final Map<String, dynamic> payload = <String, dynamic>{
+        'completedQuestions': FieldValue.increment(total),
+        if (completedQuizIds.isNotEmpty) 'completedQuizIds': completedQuizIds,
+      };
+      await _users.doc(user.uid).set(payload, SetOptions(merge: true));
+      return payload;
+    }
+
+    final User? user = _auth.currentUser;
+    if (user == null) {
+      throw StateError('No authenticated user.');
+    }
+
+    final String? idToken = await user.getIdToken();
+    if (idToken == null || idToken.isEmpty) {
+      throw StateError('Firebase did not return an ID token.');
+    }
+
+    return _backendProfileClient.submitQuizResult(
+      idToken: idToken,
+      quizId: quizId,
+      score: score,
+      total: total,
+    );
   }
 
   @override
@@ -124,7 +166,7 @@ class FirebaseAuthRepository implements AuthRepository {
     if (_backendProfileClient == null) {
       throw StateError('Backend client not initialized.');
     }
-    await _backendProfileClient!.verifyOtp(email: email, code: code, type: type);
+    await _backendProfileClient.verifyOtp(email: email, code: code, type: type);
   }
 
   @override
@@ -136,7 +178,7 @@ class FirebaseAuthRepository implements AuthRepository {
     if (_backendProfileClient == null) {
       throw StateError('Backend client not initialized.');
     }
-    await _backendProfileClient!.resetPassword(
+    await _backendProfileClient.resetPassword(
       email: email,
       code: code,
       newPassword: newPassword,
@@ -371,6 +413,26 @@ class FirebaseAuthRepository implements AuthRepository {
       'streakDays': (data['streakDays'] as num?)?.toInt() ?? 0,
       'completedQuestions': (data['completedQuestions'] as num?)?.toInt() ?? 0,
       'bookmarkedPapers': (data['bookmarkedPapers'] as num?)?.toInt() ?? 0,
+      'completedQuizIds':
+          (data['completedQuizIds'] as List<dynamic>?)
+              ?.map((dynamic item) => item.toString())
+              .where((String item) => item.isNotEmpty)
+              .toList() ??
+          const <String>[],
+      'quizResults':
+          (data['quizResults'] as List<dynamic>?)
+              ?.whereType<Map<dynamic, dynamic>>()
+              .map((Map<dynamic, dynamic> result) => <String, dynamic>{
+                    'quizId': result['quizId']?.toString() ?? '',
+                    'score': (result['score'] as num?)?.toInt() ?? 0,
+                    'total': (result['total'] as num?)?.toInt() ?? 0,
+                    'completedAt': result['completedAt'] is DateTime
+                        ? result['completedAt'] as DateTime
+                        : result['completedAt']?.toString(),
+                    'isPerfect': result['isPerfect'] as bool? ?? false,
+                  })
+              .toList() ??
+          const <Map<String, dynamic>>[],
       'isFirebaseAccount': data['isFirebaseAccount'] as bool? ?? true,
       'linkedProviders':
           (data['linkedProviders'] as List<dynamic>? ?? const <dynamic>[])
@@ -385,6 +447,42 @@ class FirebaseAuthRepository implements AuthRepository {
         data['authProvider']?.toString() ??
         _providerIdFor(user, fallback: 'password');
 
+    final List<String> completedQuizIds =
+        (data['completedQuizIds'] as List<dynamic>?)
+            ?.map((dynamic item) => item.toString())
+            .where((String item) => item.isNotEmpty)
+            .toList() ??
+        const <String>[];
+
+    final List<QuizResult> quizResults =
+        (data['quizResults'] as List<dynamic>?)
+            ?.whereType<Map<dynamic, dynamic>>()
+            .map((Map<dynamic, dynamic> result) {
+          final String quizId = result['quizId']?.toString() ?? '';
+          final int score = (result['score'] as num?)?.toInt() ?? 0;
+          final int total = (result['total'] as num?)?.toInt() ?? 0;
+          final DateTime completedAt;
+          if (result['completedAt'] is String) {
+            completedAt = DateTime.tryParse(result['completedAt'] as String) ??
+                DateTime.fromMillisecondsSinceEpoch(0);
+          } else if (result['completedAt'] is DateTime) {
+            completedAt = result['completedAt'] as DateTime;
+          } else {
+            completedAt = DateTime.fromMillisecondsSinceEpoch(0);
+          }
+
+          return QuizResult(
+            quizId: quizId,
+            score: score,
+            total: total,
+            completedAt: completedAt,
+            isPerfect: result['isPerfect'] as bool? ?? score == total,
+          );
+        })
+            .where((QuizResult result) => result.quizId.isNotEmpty)
+            .toList() ??
+        const <QuizResult>[];
+
     return AppUser(
       uid: data['firebaseUid']?.toString() ?? user.uid,
       name: data['name']?.toString() ?? user.displayName ?? 'AcadMate Student',
@@ -396,6 +494,8 @@ class FirebaseAuthRepository implements AuthRepository {
       streakDays: (data['streakDays'] as num?)?.toInt() ?? 0,
       completedQuestions: (data['completedQuestions'] as num?)?.toInt() ?? 0,
       bookmarkedPapers: (data['bookmarkedPapers'] as num?)?.toInt() ?? 0,
+      completedQuizIds: completedQuizIds,
+      quizResults: quizResults,
       isFirebaseAccount: data['isFirebaseAccount'] as bool? ?? true,
     );
   }

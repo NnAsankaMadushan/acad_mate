@@ -41,6 +41,28 @@ class BackendProfileClient {
     return _decodeObjectResponse(response);
   }
 
+  Future<Map<String, dynamic>> submitQuizResult({
+    required String idToken,
+    required String quizId,
+    required int score,
+    required int total,
+  }) async {
+    final http.Response response = await _client.post(
+      _uri('/users/me/quiz-results'),
+      headers: <String, String>{
+        'Authorization': 'Bearer $idToken',
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(<String, dynamic>{
+        'quizId': quizId,
+        'score': score,
+        'total': total,
+      }),
+    );
+    return _decodeObjectResponse(response);
+  }
+
   Future<void> sendOtp({
     required String email,
     required String type,
