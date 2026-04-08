@@ -1,4 +1,5 @@
 import 'package:acad_mate/app/providers.dart';
+import 'package:acad_mate/features/papers/application/paper_favorites_controller.dart';
 import 'package:acad_mate/core/theme/app_colors.dart';
 import 'package:acad_mate/core/widgets/glass_card.dart';
 import 'package:acad_mate/core/widgets/gradient_backdrop.dart';
@@ -18,7 +19,17 @@ class PastPaperViewerScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<PaperFavoritesState> favoritesAsync =
+        ref.watch(paperFavoritesProvider);
     final paperAsync = ref.watch(pastPaperProvider(paperId));
+
+    Future<void> _openLocalFile(String path) async {
+      final Uri fileUri = Uri.file(path);
+      if (await canLaunchUrl(fileUri)) {
+        await launchUrl(fileUri);
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -37,9 +48,47 @@ class PastPaperViewerScreen extends ConsumerWidget {
               );
             }
 
+            final bool isFavorite = favoritesAsync.maybeWhen(
+                  data: (PaperFavoritesState favorites) =>
+                      favorites.isFavorite(paper.id),
+                  orElse: () => false,
+                ) ||
+                false;
+            final String? localPath = favoritesAsync.maybeWhen(
+                  data: (PaperFavoritesState favorites) =>
+                      favorites.localPath(paper.id),
+                  orElse: () => null,
+                );
+
             return Column(
               children: <Widget>[
                 const SizedBox(height: 8),
+                if (favoritesAsync is AsyncData<PaperFavoritesState>)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: <Widget>[
+                        IconButton(
+                          icon: Icon(
+                            isFavorite
+                                ? Icons.bookmark
+                                : Icons.bookmark_border,
+                            color: isFavorite
+                                ? AppColors.primary
+                                : AppColors.textMuted,
+                          ),
+                          tooltip: isFavorite ? 'Remove saved paper' : 'Save paper',
+                          onPressed: () {
+                            ref
+                                .read(paperFavoritesProvider.notifier)
+                                .toggleFavorite(paper.id);
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                    ),
+                  ),
                 Expanded(
                   child: Container(
                     margin: const EdgeInsets.fromLTRB(20, 0, 20, 18),

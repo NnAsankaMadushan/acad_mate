@@ -79,15 +79,50 @@ class AcademicCatalog {
       }
     }
 
-    if (grade == 'O/L') {
-      return <String>[
-        'All',
+    if (grade == 'All') {
+      const List<String> allPrimary = <String>[
+        'Mathematics',
+        'Science',
+        'English',
+        'Sinhala',
+        'Tamil',
+        'Religion',
+        'Environmental Studies',
+      ];
+      const List<String> allOl = <String>[
         'Mathematics',
         'Science',
         'English',
         'History',
         'Geography',
         'ICT',
+      ];
+      final Set<String> allAlSubjects = <String>{
+        'Physics',
+        'Chemistry',
+        'Biology',
+        'Combined Maths',
+        'ICT',
+        'Accounting',
+        'Business Studies',
+        'Economics',
+        'Information Systems',
+        'History',
+        'Geography',
+        'Political Science',
+        'Logic',
+        'Sinhala',
+        'Science for Technology',
+        'Engineering Technology',
+        'Agriculture',
+      };
+
+      return <String>[
+        'All',
+        ...allPrimary,
+        ...allOl.where((subject) => !allPrimary.contains(subject)),
+        ...allAlSubjects.where((subject) =>
+            !allPrimary.contains(subject) && !allOl.contains(subject)),
       ];
     }
 

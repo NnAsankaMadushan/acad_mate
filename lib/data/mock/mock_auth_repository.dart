@@ -143,24 +143,41 @@ class MockAuthRepository implements AuthRepository {
     if (_currentUser == null) {
       throw StateError('No authenticated user.');
     }
-    if (score == total) {
-      final List<String> completedQuizIds = <String>[..._currentUser!.completedQuizIds];
-      if (!completedQuizIds.contains(quizId)) {
-        completedQuizIds.add(quizId);
-      }
-      _currentUser = _currentUser!.copyWith(
-        completedQuestions: _currentUser!.completedQuestions + total,
-        completedQuizIds: completedQuizIds,
-      );
-    } else {
-      _currentUser = _currentUser!.copyWith(
-        completedQuestions: _currentUser!.completedQuestions + total,
-      );
+
+    final List<QuizResult> quizResults = <QuizResult>[
+      ..._currentUser!.quizResults,
+      QuizResult(
+        quizId: quizId,
+        score: score,
+        total: total,
+        completedAt: DateTime.now(),
+        isPerfect: score == total,
+      ),
+    ];
+
+    final List<String> completedQuizIds = <String>[..._currentUser!.completedQuizIds];
+    if (score == total && !completedQuizIds.contains(quizId)) {
+      completedQuizIds.add(quizId);
     }
+
+    _currentUser = _currentUser!.copyWith(
+      completedQuestions: _currentUser!.completedQuestions + score,
+      completedQuizIds: completedQuizIds,
+      quizResults: quizResults,
+    );
     _stateController.add(_currentUser);
     return <String, dynamic>{
       'completedQuestions': _currentUser!.completedQuestions,
       'completedQuizIds': _currentUser!.completedQuizIds,
+      'quizResults': quizResults
+          .map((QuizResult result) => <String, dynamic>{
+                'quizId': result.quizId,
+                'score': result.score,
+                'total': result.total,
+                'completedAt': result.completedAt.toIso8601String(),
+                'isPerfect': result.isPerfect,
+              })
+          .toList(),
     };
   }
 

@@ -77,18 +77,14 @@ class _QuizSessionScreenState extends ConsumerState<QuizSessionScreen> {
     }
 
     try {
-      final Map<String, dynamic> result = await ref
-          .read(authRepositoryProvider)
-          .submitQuizResult(
-            quizId: set.id,
-            score: _score,
-            total: set.questions.length,
-          );
+      await ref.read(authRepositoryProvider).submitQuizResult(
+        quizId: set.id,
+        score: _score,
+        total: set.questions.length,
+      );
 
-      if (mounted && result.isNotEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Quiz result saved to your profile.')),
-        );
+      if (mounted) {
+        final _ = ref.refresh(authStateProvider);
       }
     } catch (_) {
       // Ignore submission errors in the quiz flow.
@@ -469,169 +465,240 @@ class _QuizResult extends StatelessWidget {
   Widget build(BuildContext context) {
     final int total = set.questions.length;
     final double accuracy = total == 0 ? 0 : score / total;
+    final bool isExcellent = accuracy >= 0.8;
+    final bool isGood = accuracy >= 0.5;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 48),
       children: <Widget>[
+        const SizedBox(height: 20),
+        Center(
+          child: Column(
+            children: <Widget>[
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: <Color>[
+                      isExcellent
+                          ? AppColors.success
+                          : isGood
+                          ? AppColors.primary
+                          : AppColors.danger,
+                      (isExcellent
+                              ? AppColors.success
+                              : isGood
+                              ? AppColors.primary
+                              : AppColors.danger)
+                          .withValues(alpha: 0.6),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: <BoxShadow>[
+                    BoxShadow(
+                      color: (isExcellent
+                              ? AppColors.success
+                              : isGood
+                              ? AppColors.primary
+                              : AppColors.danger)
+                          .withValues(alpha: 0.25),
+                      blurRadius: 30,
+                      offset: const Offset(0, 15),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Icon(
+                    isExcellent
+                        ? Icons.emoji_events_rounded
+                        : isGood
+                        ? Icons.thumb_up_rounded
+                        : Icons.psychology_rounded,
+                    size: 60,
+                    color: Colors.white,
+                  ),
+                ),
+              ).animate().scale(duration: 600.ms, curve: Curves.elasticOut),
+              const SizedBox(height: 24),
+              Text(
+                isExcellent
+                    ? 'Excellent!'
+                    : isGood
+                    ? 'Good Job!'
+                    : 'Keep Practicing!',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2, end: 0),
+              const SizedBox(height: 8),
+              Text(
+                'You scored $score out of $total',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: AppColors.textMuted,
+                  fontWeight: FontWeight.w600,
+                ),
+              ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.2, end: 0),
+            ],
+          ),
+        ),
+        const SizedBox(height: 48),
+        Row(
+          children: <Widget>[
+            _StatBox(
+              label: 'Accuracy',
+              value: '${(accuracy * 100).round()}%',
+              icon: Icons.track_changes_rounded,
+              color: AppColors.primary,
+            ),
+            const SizedBox(width: 16),
+            _StatBox(
+              label: 'Success Rate',
+              value: isExcellent ? 'High' : isGood ? 'Medium' : 'Low',
+              icon: Icons.trending_up_rounded,
+              color: AppColors.success,
+            ),
+          ],
+        ).animate().fadeIn(delay: 600.ms),
+        const SizedBox(height: 24),
         GlassCard(
+          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text(
-                'Session complete',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 12),
               Row(
                 children: <Widget>[
-                  _ResultCircle(
-                    value: '${(accuracy * 100).round()}%',
-                    label: 'Accuracy',
-                    accent: set.accentColor,
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          '$score / $total correct',
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w800),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'You finished ${set.title} and can retry to beat your score.',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ],
+                  Icon(Icons.info_outline_rounded, color: set.accentColor),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Topic breakdown',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ],
               ),
+              const SizedBox(height: 16),
+              _DetailRow(label: 'Grade', value: set.grade),
+              const Divider(height: 24, thickness: 0.5),
+              _DetailRow(label: 'Subject', value: set.subject),
+              const Divider(height: 24, thickness: 0.5),
+              _DetailRow(label: 'Topic', value: set.topic),
             ],
           ),
-        ),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: <Widget>[
-            _SummaryChip(label: 'Grade', value: set.grade),
-            _SummaryChip(label: 'Subject', value: set.subject),
-            _SummaryChip(label: 'Topic', value: set.topic),
-          ],
-        ),
-        const SizedBox(height: 16),
-        GlassCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                'Next steps',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+        ).animate().fadeIn(delay: 800.ms),
+        const SizedBox(height: 32),
+        SizedBox(
+          height: 56,
+          child: FilledButton(
+            onPressed: onRetry,
+            style: FilledButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
-              const SizedBox(height: 10),
-              Text(
-                'Try a different stream, review explanations, or move to past papers for exam-style repetition.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ],
+              backgroundColor: AppColors.primary,
+            ),
+            child: const Text(
+              'Retry this set',
+              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+            ),
           ),
-        ),
-        const SizedBox(height: 16),
-        FilledButton(onPressed: onRetry, child: const Text('Retry this set')),
+        ).animate().fadeIn(delay: 1000.ms),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 56,
+          child: OutlinedButton(
+            onPressed: () => Navigator.of(context).pop(),
+            style: OutlinedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            child: const Text(
+              'Back to practice',
+              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+            ),
+          ),
+        ).animate().fadeIn(delay: 1100.ms),
       ],
     );
   }
 }
 
-class _ResultCircle extends StatelessWidget {
-  const _ResultCircle({
-    required this.value,
+class _StatBox extends StatelessWidget {
+  const _StatBox({
     required this.label,
-    required this.accent,
+    required this.value,
+    required this.icon,
+    required this.color,
   });
 
-  final String value;
   final String label;
-  final Color accent;
+  final String value;
+  final IconData icon;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 92,
-      height: 92,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          colors: <Color>[
-            accent.withValues(alpha: 0.14),
-            accent.withValues(alpha: 0.06),
+    return Expanded(
+      child: GlassCard(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        child: Column(
+          children: <Widget>[
+            Icon(icon, color: color, size: 28),
+            const SizedBox(height: 12),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w900,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: AppColors.textMuted,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ],
         ),
-        border: Border.all(color: accent.withValues(alpha: 0.18)),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: accent,
-            ),
-          ),
-          Text(
-            label,
-            style: Theme.of(
-              context,
-            ).textTheme.labelSmall?.copyWith(color: AppColors.textMuted),
-          ),
-        ],
       ),
     );
   }
 }
 
-class _SummaryChip extends StatelessWidget {
-  const _SummaryChip({required this.label, required this.value});
+class _DetailRow extends StatelessWidget {
+  const _DetailRow({required this.label, required this.value});
 
   final String label;
   final String value;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppColors.border.withValues(alpha: 0.22),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppColors.textMuted,
-              fontWeight: FontWeight.w700,
-            ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: <Widget>[
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: AppColors.textMuted,
+            fontWeight: FontWeight.w600,
           ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: Theme.of(
-              context,
-            ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            fontWeight: FontWeight.w800,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
+

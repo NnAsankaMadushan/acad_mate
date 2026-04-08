@@ -14,5 +14,13 @@ abstract class AcademicRepository {
   });
 
   Future<PastPaper?> fetchPastPaperById(String paperId);
+
+  Future<void> saveQuestionSet(QuestionSet questionSet);
+
+  Future<void> deleteQuestionSet(String setId);
+
+  Future<void> savePastPaper(PastPaper pastPaper);
+
+  Future<void> deletePastPaper(String paperId);
 }
 

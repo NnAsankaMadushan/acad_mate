@@ -4,6 +4,7 @@ import 'package:acad_mate/core/widgets/brand_mark.dart';
 import 'package:acad_mate/core/widgets/glass_card.dart';
 import 'package:acad_mate/core/widgets/gradient_backdrop.dart';
 import 'package:acad_mate/core/widgets/section_header.dart';
+import 'package:acad_mate/features/papers/application/paper_favorites_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -15,6 +16,11 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(authStateProvider);
+    final favoritesAsync = ref.watch(paperFavoritesProvider);
+    final int savedCount = favoritesAsync.maybeWhen(
+      data: (PaperFavoritesState favorites) => favorites.favoritePaperIds.length,
+      orElse: () => 0,
+    );
     final user = userAsync.maybeWhen(data: (user) => user, orElse: () => null);
 
     return GradientBackdrop(
@@ -83,7 +89,7 @@ class ProfileScreen extends ConsumerWidget {
                     Expanded(
                       child: _MetricCard(
                         label: 'Papers',
-                        value: '${user?.bookmarkedPapers ?? 0}',
+                        value: '$savedCount',
                         icon: Icons.picture_as_pdf_rounded,
                         accent: AppColors.accent,
                       ),

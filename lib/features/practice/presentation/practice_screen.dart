@@ -5,6 +5,7 @@ import 'package:acad_mate/core/widgets/glass_card.dart';
 import 'package:acad_mate/core/widgets/gradient_backdrop.dart';
 import 'package:acad_mate/core/widgets/section_header.dart';
 import 'package:acad_mate/domain/entities/academic_filter.dart';
+import 'package:acad_mate/domain/entities/app_user.dart';
 import 'package:acad_mate/domain/entities/question_set.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -34,8 +35,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
       stream: filter.stream,
     );
     final questionSetsAsync = ref.watch(questionSetsProvider);
-    final List<String> grades =
-        AcademicCatalog.grades.where((String grade) => grade != 'All').toList();
+    final List<String> grades = AcademicCatalog.grades;
     final List<String> streams =
         AcademicCatalog.streams.where((String stream) => stream != 'All').toList();
 
@@ -180,18 +180,29 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
                 );
               }
 
+              final userAsync = ref.watch(authStateProvider);
+              final user = userAsync.maybeWhen(data: (u) => u, orElse: () => null);
+
               return Column(
-                children: sets
-                    .map(
-                      (QuestionSet set) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _QuestionSetCard(
-                          set: set,
-                          onTap: () => context.push('/quiz/${set.id}'),
-                        ),
-                      ),
-                    )
-                    .toList(),
+                children: sets.map((QuestionSet set) {
+                  QuizResult? bestResult;
+                  if (user != null) {
+                    final results = user.quizResults.where((r) => r.quizId == set.id).toList();
+                    if (results.isNotEmpty) {
+                      results.sort((a, b) => (b.score / b.total).compareTo(a.score / a.total));
+                      bestResult = results.first;
+                    }
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _QuestionSetCard(
+                      set: set,
+                      bestResult: bestResult,
+                      onTap: () => context.push('/quiz/${set.id}'),
+                    ),
+                  );
+                }).toList(),
               );
             },
             loading: () => const _LoadingCards(),
@@ -209,14 +220,20 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
 class _QuestionSetCard extends StatelessWidget {
   const _QuestionSetCard({
     required this.set,
+    required this.bestResult,
     required this.onTap,
   });
 
   final QuestionSet set;
+  final QuizResult? bestResult;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final double? accuracy = bestResult != null ? (bestResult!.score / bestResult!.total) : null;
+    final bool attempted = bestResult != null;
+    final String? bestScoreText = attempted ? '${bestResult!.score}/${bestResult!.total} marks' : null;
+
     return GlassCard(
       onTap: onTap,
       padding: const EdgeInsets.all(18),
@@ -243,6 +260,30 @@ class _QuestionSetCard extends StatelessWidget {
                       ),
                 ),
               ),
+              if (accuracy != null) ...<Widget>[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: AppColors.success.withValues(alpha: 0.18)),
+                  ),
+                  child: Row(
+                    children: <Widget>[
+                      const Icon(Icons.check_circle_rounded, size: 14, color: AppColors.success),
+                      const SizedBox(width: 6),
+                      Text(
+                        '${(accuracy * 100).round()}% correct',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: AppColors.success,
+                              fontWeight: FontWeight.w900,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+              ],
               _RatingPill(value: set.rating),
             ],
           ),
@@ -281,7 +322,7 @@ class _QuestionSetCard extends StatelessWidget {
             children: <Widget>[
               FilledButton(
                 onPressed: onTap,
-                child: const Text('Start now'),
+                child: Text(attempted ? 'Try again' : 'Start now'),
               ),
               const SizedBox(width: 12),
               Text(
@@ -293,6 +334,37 @@ class _QuestionSetCard extends StatelessWidget {
               ),
             ],
           ),
+          if (attempted) ...<Widget>[
+            const SizedBox(height: 10),
+            Row(
+              children: <Widget>[
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.success,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Done before',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.success,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  bestScoreText!,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textMuted,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

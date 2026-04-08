@@ -61,6 +61,40 @@ class MockAcademicRepository implements AcademicRepository {
     }
     return null;
   }
+
+  @override
+  Future<void> saveQuestionSet(QuestionSet questionSet) async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    final int index = _questionSets.indexWhere((QuestionSet set) => set.id == questionSet.id);
+    if (index >= 0) {
+      _questionSets[index] = questionSet;
+      return;
+    }
+    _questionSets.add(questionSet);
+  }
+
+  @override
+  Future<void> deleteQuestionSet(String setId) async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    _questionSets.removeWhere((QuestionSet set) => set.id == setId);
+  }
+
+  @override
+  Future<void> savePastPaper(PastPaper pastPaper) async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    final int index = _pastPapers.indexWhere((PastPaper paper) => paper.id == pastPaper.id);
+    if (index >= 0) {
+      _pastPapers[index] = pastPaper;
+      return;
+    }
+    _pastPapers.add(pastPaper);
+  }
+
+  @override
+  Future<void> deletePastPaper(String paperId) async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    _pastPapers.removeWhere((PastPaper paper) => paper.id == paperId);
+  }
 }
 
 const String _samplePdf =

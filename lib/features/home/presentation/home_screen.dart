@@ -6,6 +6,7 @@ import 'package:acad_mate/core/widgets/gradient_backdrop.dart';
 import 'package:acad_mate/core/widgets/section_header.dart';
 import 'package:acad_mate/domain/entities/past_paper.dart';
 import 'package:acad_mate/domain/entities/question_set.dart';
+import 'package:acad_mate/features/papers/application/paper_favorites_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,6 +26,11 @@ class HomeScreen extends ConsumerWidget {
     final userAsync = ref.watch(authStateProvider);
     final questionSetsAsync = ref.watch(questionSetsProvider);
     final papersAsync = ref.watch(pastPapersProvider);
+    final favoritesAsync = ref.watch(paperFavoritesProvider);
+    final int favoritesCount = favoritesAsync.maybeWhen(
+      data: (PaperFavoritesState favorites) => favorites.favoritePaperIds.length,
+      orElse: () => 0,
+    );
     final user = userAsync.maybeWhen(
       data: (user) => user,
       orElse: () => null,
@@ -38,7 +44,7 @@ class HomeScreen extends ConsumerWidget {
             userName: _firstName(user?.name) ?? 'Student',
             streakDays: user?.streakDays ?? 0,
             completedQuestions: user?.completedQuestions ?? 0,
-            bookmarkedPapers: user?.bookmarkedPapers ?? 0,
+            bookmarkedPapers: favoritesCount,
             onOpenPractice: onOpenPractice,
             onOpenPapers: onOpenPapers,
           ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.08, end: 0),

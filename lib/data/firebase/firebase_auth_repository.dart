@@ -1,5 +1,4 @@
 import 'package:acad_mate/core/config/app_config.dart';
-import 'package:acad_mate/data/backend/backend_profile_client.dart';
 import 'package:acad_mate/domain/entities/app_user.dart';
 import 'package:acad_mate/domain/repositories/auth_repository.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -12,27 +11,42 @@ class FirebaseAuthRepository implements AuthRepository {
   FirebaseAuthRepository({
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
-    BackendProfileClient? backendProfileClient,
   }) : _auth = auth ?? FirebaseAuth.instance,
-       _firestore = firestore ?? FirebaseFirestore.instance,
-       _backendProfileClient = backendProfileClient;
+       _firestore = firestore ?? FirebaseFirestore.instance {
+    // Eagerly initialize GoogleSignIn so it is ready before the user taps.
+    _initGoogleSignInInBackground();
+  }
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
-  final BackendProfileClient? _backendProfileClient;
   bool _googleSignInInitialized = false;
+  // Holds the in-flight or completed initialization future so concurrent
+  // callers (e.g. tapping the button while init is still in progress) wait
+  // on the same future instead of starting a second initialization.
+  Future<void>? _googleSignInInitFuture;
 
   CollectionReference<Map<String, dynamic>> get _users =>
       _firestore.collection('users');
 
-  bool get _useMongoBackend =>
-      AppConfig.useMongoBackend && _backendProfileClient != null;
-
   @override
   Stream<AppUser?> authStateChanges() {
-    return _auth.authStateChanges().asyncMap(
-      (User? user) async => user == null ? null : _mapFirebaseUser(user),
-    );
+    return _auth.authStateChanges().asyncExpand((User? user) async* {
+      if (user == null) {
+        yield null;
+        return;
+      }
+
+      // Step 1: Emit an immediate, fast representation of the user based on
+      // data already available in the Firebase User object. This makes 
+      // the app feel instant.
+      yield _defaultAppUser(user);
+
+      // Step 2: In the background, fetch the full profile from the backend.
+      final AppUser? fullUser = await _mapFirebaseUser(user);
+      if (fullUser != null) {
+        yield fullUser;
+      }
+    });
   }
 
   @override
@@ -41,6 +55,7 @@ class FirebaseAuthRepository implements AuthRepository {
     if (user == null) {
       return null;
     }
+    // We try to get the full mapping if possible, but keep it fast.
     return _mapFirebaseUser(user);
   }
 
@@ -109,10 +124,8 @@ class FirebaseAuthRepository implements AuthRepository {
 
   @override
   Future<void> sendOtp({required String email, required String type}) async {
-    if (_backendProfileClient == null) {
-      throw StateError('Backend client not initialized.');
-    }
-    await _backendProfileClient.sendOtp(email: email, type: type);
+    // Note: OTP via backend is removed. Use Firebase auth methods.
+    throw UnimplementedError('OTP via backend is no longer supported.');
   }
 
   @override
@@ -121,40 +134,56 @@ class FirebaseAuthRepository implements AuthRepository {
     required int score,
     required int total,
   }) async {
-    if (_backendProfileClient == null) {
-      // If no backend client is configured, persist only to Firestore.
-      final User? user = _auth.currentUser;
-      if (user == null) {
-        throw StateError('No authenticated user.');
-      }
-      final List<String> completedQuizIds = <String>[];
-      if (score == total) {
-        completedQuizIds.add(quizId);
-      }
-      final Map<String, dynamic> payload = <String, dynamic>{
-        'completedQuestions': FieldValue.increment(total),
-        if (completedQuizIds.isNotEmpty) 'completedQuizIds': completedQuizIds,
-      };
-      await _users.doc(user.uid).set(payload, SetOptions(merge: true));
-      return payload;
-    }
-
     final User? user = _auth.currentUser;
     if (user == null) {
       throw StateError('No authenticated user.');
     }
 
-    final String? idToken = await user.getIdToken();
-    if (idToken == null || idToken.isEmpty) {
-      throw StateError('Firebase did not return an ID token.');
+    // Compute streak from current Firestore data.
+    final DocumentSnapshot<Map<String, dynamic>> snap =
+        await _users.doc(user.uid).get();
+    final Map<String, dynamic>? data = snap.data();
+    final DateTime now = DateTime.now();
+    int streakDays = (data?['streakDays'] as num?)?.toInt() ?? 0;
+    final dynamic lastSeenRaw = data?['lastSeenAt'];
+    DateTime? lastSeen;
+    if (lastSeenRaw is Timestamp) {
+      lastSeen = lastSeenRaw.toDate();
+    }
+    if (lastSeen == null) {
+      streakDays = 1;
+    } else {
+      final int diffDays = now.difference(lastSeen).inDays;
+      final bool sameDay =
+          lastSeen.year == now.year &&
+          lastSeen.month == now.month &&
+          lastSeen.day == now.day;
+      if (!sameDay) {
+        streakDays = diffDays <= 1 ? streakDays + 1 : 1;
+      }
     }
 
-    return _backendProfileClient.submitQuizResult(
-      idToken: idToken,
-      quizId: quizId,
-      score: score,
-      total: total,
-    );
+    final Map<String, dynamic> resultEntry = <String, dynamic>{
+      'quizId': quizId,
+      'score': score,
+      'total': total,
+      'completedAt': Timestamp.now(),
+      'isPerfect': score == total,
+    };
+
+    await _users.doc(user.uid).set(<String, dynamic>{
+      'completedQuestions': FieldValue.increment(score),
+      'streakDays': streakDays,
+      'lastSeenAt': FieldValue.serverTimestamp(),
+      'quizResults': FieldValue.arrayUnion(<Map<String, dynamic>>[resultEntry]),
+      if (score == total)
+        'completedQuizIds': FieldValue.arrayUnion(<String>[quizId]),
+    }, SetOptions(merge: true));
+    return <String, dynamic>{
+      'streakDays': streakDays,
+      'completedQuestions': score,
+      'quizResults': <Map<String, dynamic>>[resultEntry],
+    };
   }
 
   @override
@@ -163,10 +192,7 @@ class FirebaseAuthRepository implements AuthRepository {
     required String code,
     required String type,
   }) async {
-    if (_backendProfileClient == null) {
-      throw StateError('Backend client not initialized.');
-    }
-    await _backendProfileClient.verifyOtp(email: email, code: code, type: type);
+    throw UnimplementedError('OTP via backend is no longer supported.');
   }
 
   @override
@@ -175,14 +201,7 @@ class FirebaseAuthRepository implements AuthRepository {
     required String code,
     required String newPassword,
   }) async {
-    if (_backendProfileClient == null) {
-      throw StateError('Backend client not initialized.');
-    }
-    await _backendProfileClient.resetPassword(
-      email: email,
-      code: code,
-      newPassword: newPassword,
-    );
+    throw UnimplementedError('OTP via backend is no longer supported.');
   }
 
   Future<void> _signInWithGoogle() async {
@@ -267,13 +286,34 @@ class FirebaseAuthRepository implements AuthRepository {
     await _auth.signInWithProvider(provider);
   }
 
+  /// Kicks off GoogleSignIn initialization in the background immediately after
+  /// the repository is constructed, so it is ready the moment the user taps.
+  void _initGoogleSignInInBackground() {
+    final String? serverClientId =
+        defaultTargetPlatform == TargetPlatform.android
+        ? null
+        : AppConfig.googleServerClientId.trim().isEmpty
+        ? null
+        : AppConfig.googleServerClientId.trim();
+    _googleSignInInitFuture = GoogleSignIn.instance
+        .initialize(serverClientId: serverClientId)
+        .then((_) {
+          _googleSignInInitialized = true;
+        })
+        .catchError((_) {
+          // Silently ignore — will retry in _ensureGoogleSignInInitialized.
+        });
+  }
+
   Future<void> _ensureGoogleSignInInitialized({String? serverClientId}) async {
     if (_googleSignInInitialized) {
       return;
     }
-
-    await GoogleSignIn.instance.initialize(serverClientId: serverClientId);
-    _googleSignInInitialized = true;
+    // Await the in-flight init if it already started; otherwise start fresh.
+    await (_googleSignInInitFuture ??=
+        GoogleSignIn.instance.initialize(serverClientId: serverClientId).then(
+          (_) => _googleSignInInitialized = true,
+        ));
   }
 
   Future<void> _persistUserProfile(
@@ -291,53 +331,13 @@ class FirebaseAuthRepository implements AuthRepository {
       'stream': stream,
       'avatarUrl': user.photoURL,
       'authProvider': authProvider,
-      'streakDays': 0,
-      'completedQuestions': 0,
-      'bookmarkedPapers': 0,
       'isFirebaseAccount': true,
     };
-
-    if (_useMongoBackend) {
-      await _syncProfileWithBackend(user, payload);
-      return;
-    }
 
     await _syncProfileWithFirestore(user, payload);
   }
 
-  Future<void> _syncProfileWithBackend(
-    User user,
-    Map<String, dynamic> payload,
-  ) async {
-    final BackendProfileClient? client = _backendProfileClient;
-    if (client == null) {
-      return;
-    }
 
-    try {
-      final String? idToken = await user.getIdToken();
-      if (idToken == null || idToken.isEmpty) {
-        throw StateError('Firebase did not return an ID token.');
-      }
-      final List<String> mergedLinkedProviders = <String>{
-        ...user.providerData
-            .map((UserInfo info) => info.providerId)
-            .whereType<String>(),
-        ...((payload['linkedProviders'] as List<dynamic>?) ?? const <dynamic>[])
-            .map((dynamic item) => item.toString()),
-      }.where((String item) => item.isNotEmpty).toList();
-      await client.upsertCurrentUserProfile(
-        idToken: idToken,
-        payload: <String, dynamic>{
-          'firebaseUid': user.uid,
-          ...payload,
-          'linkedProviders': mergedLinkedProviders,
-        },
-      );
-    } catch (_) {
-      await _syncProfileWithFirestore(user, payload);
-    }
-  }
 
   Future<void> _syncProfileWithFirestore(
     User user,
@@ -351,42 +351,39 @@ class FirebaseAuthRepository implements AuthRepository {
           .map((dynamic item) => item.toString()),
     }.where((String item) => item.isNotEmpty).toList();
 
-    await _users.doc(user.uid).set(<String, dynamic>{
+    final DocumentReference<Map<String, dynamic>> docRef =
+        _users.doc(user.uid);
+    final DocumentSnapshot<Map<String, dynamic>> snap = await docRef.get();
+
+    final Map<String, dynamic> data = <String, dynamic>{
       'firebaseUid': user.uid,
-      'createdAt': FieldValue.serverTimestamp(),
       ...payload,
       'linkedProviders': mergedLinkedProviders,
-    }, SetOptions(merge: true));
+    };
+
+    if (!snap.exists) {
+      // New user — initialise stats to zero.
+      data['streakDays'] = 0;
+      data['completedQuestions'] = 0;
+      data['bookmarkedPapers'] = 0;
+      data['quizResults'] = <Map<String, dynamic>>[];
+      data['completedQuizIds'] = <String>[];
+      data['createdAt'] = FieldValue.serverTimestamp();
+    }
+
+    await docRef.set(data, SetOptions(merge: true));
   }
 
   Future<AppUser?> _mapFirebaseUser(User user) async {
-    if (_useMongoBackend) {
-      try {
-        final DocumentSnapshot<Map<String, dynamic>> snapshot = await _users
-            .doc(user.uid)
-            .get();
-        final Map<String, dynamic>? firestoreData = snapshot.data();
-        if (firestoreData != null) {
-          await _syncProfileWithBackend(
-            user,
-            _payloadFromStoredData(user, firestoreData),
-          );
-        }
 
-        final String? idToken = await user.getIdToken();
-        if (idToken == null || idToken.isEmpty) {
-          throw StateError('Firebase did not return an ID token.');
-        }
-        final Map<String, dynamic> data = await _backendProfileClient!
-            .loadCurrentUserProfile(idToken: idToken);
-        return _appUserFromMap(user, data);
-      } catch (_) {}
-    }
 
     try {
+      // Fallback or default path: read profile from Firestore.
+      // We add a 3s timeout to keep the app snappy if Firestore is slow.
       final DocumentSnapshot<Map<String, dynamic>> snapshot = await _users
           .doc(user.uid)
-          .get();
+          .get()
+          .timeout(const Duration(seconds: 3));
       final Map<String, dynamic>? data = snapshot.data();
       if (data != null) {
         return _appUserFromMap(user, data);
@@ -396,51 +393,6 @@ class FirebaseAuthRepository implements AuthRepository {
     return _defaultAppUser(user);
   }
 
-  Map<String, dynamic> _payloadFromStoredData(
-    User user,
-    Map<String, dynamic> data,
-  ) {
-    return <String, dynamic>{
-      'name':
-          data['name']?.toString() ?? user.displayName ?? 'AcadMate Student',
-      'email': data['email']?.toString() ?? user.email ?? '',
-      'grade': data['grade']?.toString() ?? 'A/L',
-      'stream': data['stream']?.toString() ?? 'Science',
-      'avatarUrl': data['avatarUrl']?.toString() ?? user.photoURL,
-      'authProvider':
-          data['authProvider']?.toString() ??
-          _providerIdFor(user, fallback: 'password'),
-      'streakDays': (data['streakDays'] as num?)?.toInt() ?? 0,
-      'completedQuestions': (data['completedQuestions'] as num?)?.toInt() ?? 0,
-      'bookmarkedPapers': (data['bookmarkedPapers'] as num?)?.toInt() ?? 0,
-      'completedQuizIds':
-          (data['completedQuizIds'] as List<dynamic>?)
-              ?.map((dynamic item) => item.toString())
-              .where((String item) => item.isNotEmpty)
-              .toList() ??
-          const <String>[],
-      'quizResults':
-          (data['quizResults'] as List<dynamic>?)
-              ?.whereType<Map<dynamic, dynamic>>()
-              .map((Map<dynamic, dynamic> result) => <String, dynamic>{
-                    'quizId': result['quizId']?.toString() ?? '',
-                    'score': (result['score'] as num?)?.toInt() ?? 0,
-                    'total': (result['total'] as num?)?.toInt() ?? 0,
-                    'completedAt': result['completedAt'] is DateTime
-                        ? result['completedAt'] as DateTime
-                        : result['completedAt']?.toString(),
-                    'isPerfect': result['isPerfect'] as bool? ?? false,
-                  })
-              .toList() ??
-          const <Map<String, dynamic>>[],
-      'isFirebaseAccount': data['isFirebaseAccount'] as bool? ?? true,
-      'linkedProviders':
-          (data['linkedProviders'] as List<dynamic>? ?? const <dynamic>[])
-              .map((dynamic item) => item.toString())
-              .where((String item) => item.isNotEmpty)
-              .toList(),
-    };
-  }
 
   AppUser _appUserFromMap(User user, Map<String, dynamic> data) {
     final String providerId =
@@ -462,13 +414,14 @@ class FirebaseAuthRepository implements AuthRepository {
           final int score = (result['score'] as num?)?.toInt() ?? 0;
           final int total = (result['total'] as num?)?.toInt() ?? 0;
           final DateTime completedAt;
-          if (result['completedAt'] is String) {
-            completedAt = DateTime.tryParse(result['completedAt'] as String) ??
-                DateTime.fromMillisecondsSinceEpoch(0);
-          } else if (result['completedAt'] is DateTime) {
-            completedAt = result['completedAt'] as DateTime;
+          final dynamic completedAtRaw = result['completedAt'];
+          if (completedAtRaw is DateTime) {
+            completedAt = completedAtRaw;
+          } else if (completedAtRaw is Timestamp) {
+            completedAt = completedAtRaw.toDate();
           } else {
-            completedAt = DateTime.fromMillisecondsSinceEpoch(0);
+            completedAt = DateTime.tryParse(completedAtRaw?.toString() ?? '') ??
+                DateTime.fromMillisecondsSinceEpoch(0);
           }
 
           return QuizResult(

@@ -1,5 +1,6 @@
 import 'package:acad_mate/app/providers.dart';
 import 'package:acad_mate/core/data/academic_catalog.dart';
+import 'package:acad_mate/features/papers/application/paper_favorites_controller.dart';
 import 'package:acad_mate/core/theme/app_colors.dart';
 import 'package:acad_mate/core/widgets/glass_card.dart';
 import 'package:acad_mate/core/widgets/gradient_backdrop.dart';
@@ -21,10 +22,12 @@ class PastPapersScreen extends ConsumerWidget {
       grade: filter.grade,
       stream: filter.stream,
     );
-    final List<String> grades =
-        AcademicCatalog.grades.where((String grade) => grade != 'All').toList();
+    final List<String> grades = AcademicCatalog.grades;
     final List<String> streams =
         AcademicCatalog.streams.where((String stream) => stream != 'All').toList();
+    final AsyncValue<PaperFavoritesState> favoritesAsync =
+        ref.watch(paperFavoritesProvider);
+    final PastPaperViewMode viewMode = ref.watch(pastPaperViewModeProvider);
 
     return GradientBackdrop(
       child: ListView(
@@ -33,6 +36,37 @@ class PastPapersScreen extends ConsumerWidget {
           const SectionHeader(
             title: 'Past papers',
             subtitle: 'PDF access with in-app preview or external open.',
+          ),
+          const SizedBox(height: 12),
+          GlassCard(
+            child: Row(
+              children: <Widget>[
+                const Expanded(
+                  child: Text(
+                    'View',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ChoiceChip(
+                  label: const Text('All papers'),
+                  selected: ref.watch(pastPaperViewModeProvider) ==
+                      PastPaperViewMode.all,
+                  onSelected: (_) => ref
+                      .read(pastPaperViewModeProvider.notifier)
+                      .setMode(PastPaperViewMode.all),
+                ),
+                const SizedBox(width: 10),
+                ChoiceChip(
+                  label: const Text('Saved'),
+                  selected: ref.watch(pastPaperViewModeProvider) ==
+                      PastPaperViewMode.favorites,
+                  onSelected: (_) => ref
+                      .read(pastPaperViewModeProvider.notifier)
+                      .setMode(PastPaperViewMode.favorites),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 12),
           GlassCard(
@@ -136,33 +170,85 @@ class PastPapersScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 18),
-          papersAsync.when(
-            data: (List<PastPaper> papers) {
-              if (papers.isEmpty) {
-                return const _EmptyResult(
-                  title: 'No papers found',
-                  subtitle:
-                      'Try switching grade, stream, or subject to find more PDFs.',
-                );
-              }
+          favoritesAsync.when(
+            data: (PaperFavoritesState favorites) {
+              return papersAsync.when(
+                data: (List<PastPaper> papers) {
+                  final Set<String> favoriteIds = favorites.favoritePaperIds;
+                  final List<PastPaper> displayPapers = viewMode == PastPaperViewMode.favorites
+                      ? papers.where((PastPaper paper) => favoriteIds.contains(paper.id)).toList()
+                      : papers;
 
-              return Column(
-                children: papers
-                    .map(
-                      (PastPaper paper) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _PaperCard(
-                          paper: paper,
-                          onTap: () => context.push('/paper/${paper.id}'),
-                        ),
-                      ),
-                    )
-                    .toList(),
+                  if (displayPapers.isEmpty) {
+                    return _EmptyResult(
+                      title: viewMode == PastPaperViewMode.favorites
+                          ? 'No saved papers yet'
+                          : 'No papers found',
+                      subtitle: viewMode == PastPaperViewMode.favorites
+                          ? 'Tap the bookmark icon on a paper to save it for later.'
+                          : 'Try switching grade, stream, or subject to find more PDFs.',
+                    );
+                  }
+
+                  final Map<String, List<PastPaper>> groupedPapers = <String, List<PastPaper>>{};
+                  for (final PastPaper paper in displayPapers) {
+                    groupedPapers.putIfAbsent(paper.grade, () => <PastPaper>[]).add(paper);
+                  }
+
+                  final List<String> gradeOrder = AcademicCatalog.grades
+                      .where((String grade) => grade != 'All')
+                      .toList();
+
+                  final List<MapEntry<String, List<PastPaper>>> sortedGroups = groupedPapers.entries.toList()
+                    ..sort((MapEntry<String, List<PastPaper>> a, MapEntry<String, List<PastPaper>> b) {
+                      return gradeOrder.indexOf(a.key).compareTo(gradeOrder.indexOf(b.key));
+                    });
+
+                  return Column(
+                    children: sortedGroups
+                        .map(
+                          (MapEntry<String, List<PastPaper>> group) => Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: Text(
+                                  group.key,
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                ),
+                              ),
+                              ...group.value.map(
+                                (PastPaper paper) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: _PaperCard(
+                                    paper: paper,
+                                    isFavorite: favoriteIds.contains(paper.id),
+                                    localPath: favorites.localPath(paper.id),
+                                    onToggleFavorite: () => ref
+                                        .read(paperFavoritesProvider.notifier)
+                                        .toggleFavorite(paper.id),
+                                    onTap: () => context.push('/paper/${paper.id}'),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                        .toList(),
+                  );
+                },
+                loading: () => const _LoadingCards(),
+                error: (Object error, StackTrace stackTrace) => _EmptyResult(
+                  title: 'Could not load past papers',
+                  subtitle: error.toString(),
+                ),
               );
             },
-            loading: () => const _LoadingCards(),
+            loading: () => const Center(child: CircularProgressIndicator()),
             error: (Object error, StackTrace stackTrace) => _EmptyResult(
-              title: 'Could not load past papers',
+              title: 'Could not load saved papers',
               subtitle: error.toString(),
             ),
           ),
@@ -176,10 +262,16 @@ class _PaperCard extends StatelessWidget {
   const _PaperCard({
     required this.paper,
     required this.onTap,
+    required this.isFavorite,
+    required this.onToggleFavorite,
+    required this.localPath,
   });
 
   final PastPaper paper;
   final VoidCallback onTap;
+  final bool isFavorite;
+  final VoidCallback onToggleFavorite;
+  final String? localPath;
 
   @override
   Widget build(BuildContext context) {
@@ -225,13 +317,27 @@ class _PaperCard extends StatelessWidget {
                     _MetaChip(text: paper.examType),
                     _MetaChip(text: '${paper.pages} pages'),
                     _MetaChip(text: paper.fileSize),
+                    if (localPath != null)
+                      const _MetaChip(text: 'Saved locally'),
                   ],
                 ),
               ],
             ),
           ),
           const SizedBox(width: 8),
-          const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
+          Column(
+            children: <Widget>[
+              IconButton(
+                icon: Icon(
+                  isFavorite ? Icons.bookmark : Icons.bookmark_border,
+                  color: isFavorite ? AppColors.primary : AppColors.textMuted,
+                ),
+                onPressed: onToggleFavorite,
+              ),
+              const SizedBox(height: 4),
+              const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
+            ],
+          ),
         ],
       ),
     );
