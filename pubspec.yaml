@@ -79,6 +79,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/branding/acadmate_logo.png
+    - assets/branding/app_icon.png
 
   fonts:
     - family: Inter

@@ -11,23 +11,179 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class PastPapersScreen extends ConsumerWidget {
+class PastPapersScreen extends ConsumerStatefulWidget {
   const PastPapersScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final CatalogFilter filter = ref.watch(catalogFilterProvider);
-    final papersAsync = ref.watch(pastPapersProvider);
-    final List<String> subjects = AcademicCatalog.subjectsFor(
-      grade: filter.grade,
-      stream: filter.stream,
+  ConsumerState<PastPapersScreen> createState() => _PastPapersScreenState();
+}
+
+class _PastPapersScreenState extends ConsumerState<PastPapersScreen>
+    with TickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        ref.read(pastPaperViewModeProvider.notifier).setMode(
+          _tabController.index == 0
+              ? PastPaperViewMode.all
+              : PastPaperViewMode.favorites,
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  void _showFilterBottomSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return Consumer(
+          builder: (BuildContext context, WidgetRef sheetRef, Widget? child) {
+            final CatalogFilter filter = sheetRef.watch(catalogFilterProvider);
+            final List<String> subjects = AcademicCatalog.subjectsFor(
+              grade: filter.grade,
+              stream: filter.stream,
+            );
+            final List<String> grades = AcademicCatalog.grades;
+            final List<String> streams =
+                AcademicCatalog.streams.where((String stream) => stream != 'All').toList();
+
+            return Container(
+              padding: const EdgeInsets.all(20),
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.8,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Row(
+                      children: <Widget>[
+                        Text(
+                          'Filters',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () {
+                            sheetRef.read(catalogFilterProvider.notifier).reset();
+                            Navigator.pop(context);
+                          },
+                          child: const Text('Reset'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Grade',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: grades.map((String grade) {
+                        return ChoiceChip(
+                          label: Text(grade),
+                          showCheckmark: false,
+                          selected: filter.grade == grade,
+                          onSelected: (_) {
+                            sheetRef.read(catalogFilterProvider.notifier).setGrade(grade);
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 20),
+                    if (filter.grade == 'A/L') ...<Widget>[
+                      Text(
+                        'Stream',
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: streams.map((String stream) {
+                          return ChoiceChip(
+                            label: Text(stream),
+                            showCheckmark: false,
+                            selected: filter.stream == stream,
+                            onSelected: (_) {
+                              sheetRef
+                                  .read(catalogFilterProvider.notifier)
+                                  .setStream(stream);
+                            },
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                    Text(
+                      'Subject',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: subjects.map((String subject) {
+                        return ChoiceChip(
+                          label: Text(subject),
+                          showCheckmark: false,
+                          selected: filter.subject == subject,
+                          onSelected: (_) {
+                            sheetRef
+                                .read(catalogFilterProvider.notifier)
+                                .setSubject(subject);
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
-    final List<String> grades = AcademicCatalog.grades;
-    final List<String> streams =
-        AcademicCatalog.streams.where((String stream) => stream != 'All').toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final papersAsync = ref.watch(pastPapersProvider);
     final AsyncValue<PaperFavoritesState> favoritesAsync =
         ref.watch(paperFavoritesProvider);
     final PastPaperViewMode viewMode = ref.watch(pastPaperViewModeProvider);
+    
+    if (_tabController.index != (viewMode == PastPaperViewMode.all ? 0 : 1)) {
+        _tabController.index = viewMode == PastPaperViewMode.all ? 0 : 1;
+    }
 
     return GradientBackdrop(
       child: ListView(
@@ -35,38 +191,39 @@ class PastPapersScreen extends ConsumerWidget {
         children: <Widget>[
           const SectionHeader(
             title: 'Past papers',
-            subtitle: 'PDF access with in-app preview or external open.',
+            subtitle: 'Use filters to narrow down the paper list.',
           ),
           const SizedBox(height: 12),
-          GlassCard(
-            child: Row(
-              children: <Widget>[
-                const Expanded(
-                  child: Text(
-                    'View',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ChoiceChip(
-                  label: const Text('All papers'),
-                  showCheckmark: false,
-                  selected: ref.watch(pastPaperViewModeProvider) ==
-                      PastPaperViewMode.all,
-                  onSelected: (_) => ref
-                      .read(pastPaperViewModeProvider.notifier)
-                      .setMode(PastPaperViewMode.all),
-                ),
-                const SizedBox(width: 10),
-                ChoiceChip(
-                  label: const Text('Saved'),
-                  showCheckmark: false,
-                  selected: ref.watch(pastPaperViewModeProvider) ==
-                      PastPaperViewMode.favorites,
-                  onSelected: (_) => ref
-                      .read(pastPaperViewModeProvider.notifier)
-                      .setMode(PastPaperViewMode.favorites),
-                ),
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.6),
+                width: 0.7,
+              ),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              dividerColor: Colors.transparent,
+              indicator: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              indicatorSize: TabBarIndicatorSize.tab,
+              indicatorPadding: EdgeInsets.zero,
+              labelColor: Colors.white,
+              unselectedLabelColor: AppColors.text,
+              labelStyle: const TextStyle(
+                fontWeight: FontWeight.w700,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontWeight: FontWeight.w700,
+              ),
+              tabs: const <Widget>[
+                Tab(text: 'All papers'),
+                Tab(text: 'Saved'),
               ],
             ),
           ),
@@ -75,102 +232,64 @@ class PastPapersScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
-                  'Use the same filters as practice to narrow the paper list.',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  'Grade',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  height: 44,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemBuilder: (BuildContext context, int index) {
-                      final String grade = grades[index];
-                      return ChoiceChip(
-                        label: Text(grade),
-                        showCheckmark: false,
-                        selected: filter.grade == grade,
-                        onSelected: (_) => ref
-                            .read(catalogFilterProvider.notifier)
-                            .setGrade(grade),
-                      );
-                    },
-                    separatorBuilder: (_, __) => const SizedBox(width: 10),
-                    itemCount: grades.length,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                if (filter.grade == 'A/L') ...<Widget>[
-                  Text(
-                    'Stream',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: TextField(
+                        onChanged: (value) =>
+                            ref.read(catalogFilterProvider.notifier).setSearch(value),
+                        decoration: const InputDecoration(
+                          hintText: 'Search papers or exam types',
+                          prefixIcon: Icon(Icons.search_rounded),
                         ),
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    height: 44,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemBuilder: (BuildContext context, int index) {
-                        final String stream = streams[index];
-                        return ChoiceChip(
-                          label: Text(stream),
-                          showCheckmark: false,
-                          selected: filter.stream == stream,
-                          onSelected: (_) => ref
-                              .read(catalogFilterProvider.notifier)
-                              .setStream(stream),
-                        );
-                      },
-                      separatorBuilder: (_, __) => const SizedBox(width: 10),
-                      itemCount: streams.length,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                Text(
-                  'Subject',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
                       ),
+                    ),
+                    IconButton(
+                      onPressed: _showFilterBottomSheet,
+                      icon: const Icon(Icons.filter_list_rounded),
+                      tooltip: 'Filters',
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  height: 44,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemBuilder: (BuildContext context, int index) {
-                      final String subject = subjects[index];
-                      return ChoiceChip(
-                        label: Text(subject),
-                        showCheckmark: false,
-                        selected: filter.subject == subject,
-                        onSelected: (_) => ref
-                            .read(catalogFilterProvider.notifier)
-                            .setSubject(subject),
-                      );
-                    },
-                    separatorBuilder: (_, __) => const SizedBox(width: 10),
-                    itemCount: subjects.length,
-                  ),
+                Consumer(
+                  builder: (context, ref, child) {
+                    final filter = ref.watch(catalogFilterProvider);
+                    final List<String> activeFilters = [];
+                    if (filter.grade != 'All') activeFilters.add(filter.grade);
+                    if (filter.grade == 'A/L' && filter.stream != 'All') activeFilters.add(filter.stream);
+                    if (filter.subject != 'All') activeFilters.add(filter.subject);
+                    
+                    if (activeFilters.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+                    
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 14),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: activeFilters
+                            .map((f) => Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(999),
+                                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                                  ),
+                                  child: Text(
+                                    f,
+                                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                          color: AppColors.primary,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                  ),
+                                ))
+                            .toList(),
+                      ),
+                    );
+                  },
                 ),
-                const SizedBox(height: 16),
-                TextField(
-                  onChanged: (value) =>
-                      ref.read(catalogFilterProvider.notifier).setSearch(value),
-                  decoration: const InputDecoration(
-                    hintText: 'Search papers or exam types',
-                    prefixIcon: Icon(Icons.search_rounded),
-                  ),
-                ),
+
               ],
             ),
           ),

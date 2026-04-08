@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:acad_mate/app/providers.dart';
 import 'package:acad_mate/core/theme/app_colors.dart';
 import 'package:acad_mate/core/widgets/brand_mark.dart';
@@ -38,141 +40,150 @@ class HomeScreen extends ConsumerWidget {
 
     return GradientBackdrop(
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 140),
+        padding: const EdgeInsets.only(bottom: 140),
         children: <Widget>[
           _HeroCard(
             userName: _firstName(user?.name) ?? 'Student',
+            avatarUrl: user?.avatarUrl,
             streakDays: user?.streakDays ?? 0,
             completedQuestions: user?.completedQuestions ?? 0,
             bookmarkedPapers: favoritesCount,
             onOpenPractice: onOpenPractice,
             onOpenPapers: onOpenPapers,
           ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.08, end: 0),
-          const SizedBox(height: 20),
-          const SectionHeader(
-            title: 'Smart shortcuts',
-            subtitle: 'Jump straight into common study lanes.',
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: <Widget>[
-              _ShortcutTile(
-                title: 'A/L Science',
-                subtitle: 'Physics, Chemistry, Biology',
-                icon: Icons.science_rounded,
-                accent: AppColors.primary,
-                onTap: () {
-                  final controller = ref.read(catalogFilterProvider.notifier);
-                  controller
-                    ..setGrade('A/L')
-                    ..setStream('Science');
-                  onOpenPractice();
-                },
-              ),
-              _ShortcutTile(
-                title: 'A/L Commerce',
-                subtitle: 'Accounting, Economics, IS',
-                icon: Icons.account_balance_rounded,
-                accent: AppColors.secondary,
-                onTap: () {
-                  final controller = ref.read(catalogFilterProvider.notifier);
-                  controller
-                    ..setGrade('A/L')
-                    ..setStream('Commerce');
-                  onOpenPractice();
-                },
-              ),
-              _ShortcutTile(
-                title: 'O/L Mathematics',
-                subtitle: 'Equation and algebra drills',
-                icon: Icons.calculate_rounded,
-                accent: AppColors.accent,
-                onTap: () {
-                  final controller = ref.read(catalogFilterProvider.notifier);
-                  controller
-                    ..setGrade('O/L')
-                    ..setSubject('Mathematics');
-                  onOpenPractice();
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          SectionHeader(
-            title: 'Featured question sets',
-            subtitle: 'Built for quick practice sessions.',
-            actionLabel: 'Practice',
-            onAction: onOpenPractice,
-          ),
-          const SizedBox(height: 12),
-          questionSetsAsync.when(
-            data: (List<QuestionSet> sets) {
-              final List<QuestionSet> featured = sets.take(3).toList();
-              if (featured.isEmpty) {
-                return const _EmptyCard(
-                  title: 'No sets match your current filters.',
-                  subtitle: 'Open Practice and tweak the filters.',
-                );
-              }
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                const SizedBox(height: 20),
+                const SectionHeader(
+                  title: 'Smart shortcuts',
+                  subtitle: 'Jump straight into common study lanes.',
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: <Widget>[
+                    _ShortcutTile(
+                      title: 'A/L Science',
+                      subtitle: 'Physics, Chemistry, Biology',
+                      icon: Icons.science_rounded,
+                      accent: AppColors.primary,
+                      onTap: () {
+                        final controller = ref.read(catalogFilterProvider.notifier);
+                        controller
+                          ..setGrade('A/L')
+                          ..setStream('Science');
+                        onOpenPractice();
+                      },
+                    ),
+                    _ShortcutTile(
+                      title: 'A/L Commerce',
+                      subtitle: 'Accounting, Economics, IS',
+                      icon: Icons.account_balance_rounded,
+                      accent: AppColors.secondary,
+                      onTap: () {
+                        final controller = ref.read(catalogFilterProvider.notifier);
+                        controller
+                          ..setGrade('A/L')
+                          ..setStream('Commerce');
+                        onOpenPractice();
+                      },
+                    ),
+                    _ShortcutTile(
+                      title: 'O/L Mathematics',
+                      subtitle: 'Equation and algebra drills',
+                      icon: Icons.calculate_rounded,
+                      accent: AppColors.accent,
+                      onTap: () {
+                        final controller = ref.read(catalogFilterProvider.notifier);
+                        controller
+                          ..setGrade('O/L')
+                          ..setSubject('Mathematics');
+                        onOpenPractice();
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                SectionHeader(
+                  title: 'Featured question sets',
+                  subtitle: 'Built for quick practice sessions.',
+                  actionLabel: 'Practice',
+                  onAction: onOpenPractice,
+                ),
+                const SizedBox(height: 12),
+                questionSetsAsync.when(
+                  data: (List<QuestionSet> sets) {
+                    final List<QuestionSet> featured = sets.take(3).toList();
+                    if (featured.isEmpty) {
+                      return const _EmptyCard(
+                        title: 'No sets match your current filters.',
+                        subtitle: 'Open Practice and tweak the filters.',
+                      );
+                    }
 
-              return Column(
-                children: featured
-                    .map(
-                      (QuestionSet set) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _QuestionSetMiniCard(
-                          set: set,
-                          onTap: onOpenPractice,
-                        ),
-                      ),
-                    )
-                    .toList(),
-              );
-            },
-            loading: () => const _LoadingStack(),
-            error: (Object error, StackTrace stackTrace) => _EmptyCard(
-              title: 'Could not load practice sets',
-              subtitle: error.toString(),
-            ),
-          ),
-          const SizedBox(height: 24),
-          SectionHeader(
-            title: 'Past papers',
-            subtitle: 'PDFs ready for in-app review.',
-            actionLabel: 'Open',
-            onAction: onOpenPapers,
-          ),
-          const SizedBox(height: 12),
-          papersAsync.when(
-            data: (List<PastPaper> papers) {
-              final List<PastPaper> latest = papers.take(2).toList();
-              if (latest.isEmpty) {
-                return const _EmptyCard(
-                  title: 'No papers match your current filters.',
-                  subtitle: 'Open Papers and try a different subject.',
-                );
-              }
+                    return Column(
+                      children: featured
+                          .map(
+                            (QuestionSet set) => Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _QuestionSetMiniCard(
+                                set: set,
+                                onTap: onOpenPractice,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    );
+                  },
+                  loading: () => const _LoadingStack(),
+                  error: (Object error, StackTrace stackTrace) => _EmptyCard(
+                    title: 'Could not load practice sets',
+                    subtitle: error.toString(),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SectionHeader(
+                  title: 'Past papers',
+                  subtitle: 'PDFs ready for in-app review.',
+                  actionLabel: 'Open',
+                  onAction: onOpenPapers,
+                ),
+                const SizedBox(height: 12),
+                papersAsync.when(
+                  data: (List<PastPaper> papers) {
+                    final List<PastPaper> latest = papers.take(2).toList();
+                    if (latest.isEmpty) {
+                      return const _EmptyCard(
+                        title: 'No papers match your current filters.',
+                        subtitle: 'Open Papers and try a different subject.',
+                      );
+                    }
 
-              return Column(
-                children: latest
-                    .map(
-                      (PastPaper paper) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _PaperMiniCard(
-                          paper: paper,
-                          onTap: onOpenPapers,
-                        ),
-                      ),
-                    )
-                    .toList(),
-              );
-            },
-            loading: () => const _LoadingStack(),
-            error: (Object error, StackTrace stackTrace) => _EmptyCard(
-              title: 'Could not load papers',
-              subtitle: error.toString(),
+                    return Column(
+                      children: latest
+                          .map(
+                            (PastPaper paper) => Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _PaperMiniCard(
+                                paper: paper,
+                                onTap: onOpenPapers,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    );
+                  },
+                  loading: () => const _LoadingStack(),
+                  error: (Object error, StackTrace stackTrace) => _EmptyCard(
+                    title: 'Could not load papers',
+                    subtitle: error.toString(),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -184,6 +195,7 @@ class HomeScreen extends ConsumerWidget {
 class _HeroCard extends StatelessWidget {
   const _HeroCard({
     required this.userName,
+    this.avatarUrl,
     required this.streakDays,
     required this.completedQuestions,
     required this.bookmarkedPapers,
@@ -192,6 +204,7 @@ class _HeroCard extends StatelessWidget {
   });
 
   final String userName;
+  final String? avatarUrl;
   final int streakDays;
   final int completedQuestions;
   final int bookmarkedPapers;
@@ -200,108 +213,135 @@ class _HeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(34),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: <Color>[
-            AppColors.primary,
-            Color(0xFF2F86FF),
-            AppColors.secondary,
-          ],
-        ),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.24),
-            blurRadius: 32,
-            offset: const Offset(0, 18),
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.topCenter,
+      children: <Widget>[
+        // Background Curved Shape
+        Container(
+          margin: const EdgeInsets.only(bottom: 60), // Room for the floating card overlay
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.zero,
+              bottom: Radius.circular(72), // Pronounced bottom curve
+            ),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.24),
+                blurRadius: 32,
+                offset: const Offset(0, 18),
+              ),
+            ],
           ),
-        ],
-      ),
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Expanded(
+          child: ClipRRect(
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.zero,
+              bottom: Radius.circular(72),
+            ),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.25),
+                  border: Border(
+                    bottom: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+                padding: const EdgeInsets.fromLTRB(20, 40, 20, 78), // Space so text avoids floating card, added more top padding for edge-to-edge
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      'Hi, $userName',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Keep the momentum going. Practice a set or open a paper in seconds.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.9),
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              const BrandLogo(size: 76, heroTag: null),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
-              _StatPill(
-                label: 'Streak',
-                value: '$streakDays days',
-                icon: Icons.local_fire_department_rounded,
+              if (avatarUrl != null && avatarUrl!.isNotEmpty)
+                CircleAvatar(
+                  radius: 36,
+                  backgroundImage: NetworkImage(avatarUrl!),
+                  backgroundColor: Colors.white,
+                )
+              else
+                CircleAvatar(
+                  radius: 36,
+                  backgroundColor: Colors.white.withValues(alpha: 0.2),
+                  child: Text(
+                    userName.isNotEmpty ? userName[0].toUpperCase() : 'S',
+                    style: const TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 16),
+              Text(
+                'Hi, $userName',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                    ),
+                textAlign: TextAlign.center,
               ),
-              _StatPill(
-                label: 'Solved',
-                value: '$completedQuestions',
-                icon: Icons.check_circle_rounded,
-              ),
-              _StatPill(
-                label: 'Saved',
-                value: '$bookmarkedPapers papers',
-                icon: Icons.bookmark_rounded,
+              const SizedBox(height: 8),
+              Text(
+                'Keep the momentum going. Practice a set or open a paper in seconds.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.9),
+                    ),
+                textAlign: TextAlign.center,
               ),
             ],
           ),
-          const SizedBox(height: 18),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: FilledButton(
-                  onPressed: onOpenPractice,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: AppColors.primaryDark,
-                  ),
-                  child: const Text('Start Practice'),
-                ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FilledButton.tonal(
-                  onPressed: onOpenPapers,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Colors.white.withValues(alpha: 0.16),
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text('Past Papers'),
-                ),
-              ),
-            ],
+            ),
           ),
-        ],
-      ),
+        ),
+        
+        // Floating Card
+        Positioned(
+          bottom: 0,
+          left: 20,
+          right: 20,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: <BoxShadow>[
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: <Widget>[
+                _FloatingStat(
+                  label: 'Streak',
+                  value: '$streakDays',
+                  icon: Icons.local_fire_department_rounded,
+                  color: const Color(0xFFFF9800), // Orange
+                ),
+                _FloatingStat(
+                  label: 'Solved',
+                  value: '$completedQuestions',
+                  icon: Icons.check_circle_rounded,
+                  color: const Color(0xFF4CAF50), // Green
+                ),
+                _FloatingStat(
+                  label: 'Saved',
+                  value: '$bookmarkedPapers',
+                  icon: Icons.bookmark_rounded,
+                  color: const Color(0xFF2196F3), // Blue
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -534,51 +574,49 @@ class _Badge extends StatelessWidget {
   }
 }
 
-class _StatPill extends StatelessWidget {
-  const _StatPill({
+class _FloatingStat extends StatelessWidget {
+  const _FloatingStat({
     required this.label,
     required this.value,
     required this.icon,
+    required this.color,
   });
 
   final String label;
   final String value;
   final IconData icon;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Icon(icon, size: 16, color: Colors.white),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: Colors.white70,
-                    ),
-              ),
-              Text(
-                value,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                    ),
-              ),
-            ],
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            shape: BoxShape.circle,
           ),
-        ],
-      ),
+          child: Icon(icon, color: color, size: 22),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w900,
+                color: AppColors.text,
+              ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: AppColors.textMuted,
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+      ],
     );
   }
 }

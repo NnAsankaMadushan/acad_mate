@@ -18,204 +18,353 @@ class PracticeScreen extends ConsumerStatefulWidget {
   ConsumerState<PracticeScreen> createState() => _PracticeScreenState();
 }
 
-class _PracticeScreenState extends ConsumerState<PracticeScreen> {
+class _PracticeScreenState extends ConsumerState<PracticeScreen>
+    with TickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _tabController.dispose();
     super.dispose();
+  }
+
+  void _showFilterBottomSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return Consumer(
+          builder: (BuildContext context, WidgetRef sheetRef, Widget? child) {
+            final CatalogFilter filter = sheetRef.watch(catalogFilterProvider);
+            final List<String> subjects = AcademicCatalog.subjectsFor(
+              grade: filter.grade,
+              stream: filter.stream,
+            );
+            final List<String> grades = AcademicCatalog.grades;
+            final List<String> streams =
+                AcademicCatalog.streams.where((String stream) => stream != 'All').toList();
+
+            return Container(
+              padding: const EdgeInsets.all(20),
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.8,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Row(
+                      children: <Widget>[
+                        Text(
+                          'Filters',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () {
+                            sheetRef.read(catalogFilterProvider.notifier).reset();
+                            _searchController.clear();
+                            Navigator.pop(context);
+                          },
+                          child: const Text('Reset'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Grade',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: grades.map((String grade) {
+                        return ChoiceChip(
+                          label: Text(grade),
+                          showCheckmark: false,
+                          selected: filter.grade == grade,
+                          onSelected: (_) {
+                            sheetRef.read(catalogFilterProvider.notifier).setGrade(grade);
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 20),
+                    if (filter.grade == 'A/L') ...<Widget>[
+                      Text(
+                        'Stream',
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: streams.map((String stream) {
+                          return ChoiceChip(
+                            label: Text(stream),
+                            showCheckmark: false,
+                            selected: filter.stream == stream,
+                            onSelected: (_) {
+                              sheetRef
+                                  .read(catalogFilterProvider.notifier)
+                                  .setStream(stream);
+                            },
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                    Text(
+                      'Subject',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: subjects.map((String subject) {
+                        return ChoiceChip(
+                          label: Text(subject),
+                          showCheckmark: false,
+                          selected: filter.subject == subject,
+                          onSelected: (_) {
+                            sheetRef
+                                .read(catalogFilterProvider.notifier)
+                                .setSubject(subject);
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final CatalogFilter filter = ref.watch(catalogFilterProvider);
-    final List<String> subjects = AcademicCatalog.subjectsFor(
-      grade: filter.grade,
-      stream: filter.stream,
-    );
     final questionSetsAsync = ref.watch(questionSetsProvider);
-    final List<String> grades = AcademicCatalog.grades;
-    final List<String> streams =
-        AcademicCatalog.streams.where((String stream) => stream != 'All').toList();
+    final userAsync = ref.watch(authStateProvider);
+    final user = userAsync.maybeWhen(data: (u) => u, orElse: () => null);
 
     return GradientBackdrop(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 140),
+      child: Column(
         children: <Widget>[
-          const SectionHeader(
-            title: 'Practice by category',
-            subtitle: 'Grade, subject, and stream filters stay in sync.',
-          ),
-          const SizedBox(height: 12),
-          GlassCard(
+          const SizedBox(height: 18),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                TextField(
-                  controller: _searchController,
-                  onChanged: (value) => ref
-                      .read(catalogFilterProvider.notifier)
-                      .setSearch(value),
-                  decoration: const InputDecoration(
-                    hintText: 'Search by topic, subject, or stream',
-                    prefixIcon: Icon(Icons.search_rounded),
-                  ),
+                const SectionHeader(
+                  title: 'Practice by category',
+                  subtitle: 'Use filters to narrow down practice sets.',
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  'Grade',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  height: 44,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemBuilder: (BuildContext context, int index) {
-                      final String grade = grades[index];
-                      return ChoiceChip(
-                        label: Text(grade),
-                        showCheckmark: false,
-                        selected: filter.grade == grade,
-                        onSelected: (_) {
-                          ref.read(catalogFilterProvider.notifier).setGrade(grade);
-                        },
-                      );
-                    },
-                    separatorBuilder: (_, __) => const SizedBox(width: 10),
-                    itemCount: grades.length,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                if (filter.grade == 'A/L') ...<Widget>[
-                  Text(
-                    'Stream',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    height: 44,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemBuilder: (BuildContext context, int index) {
-                        final String stream = streams[index];
-                        return ChoiceChip(
-                          label: Text(stream),
-                          showCheckmark: false,
-                          selected: filter.stream == stream,
-                          onSelected: (_) {
-                            ref
-                                .read(catalogFilterProvider.notifier)
-                                .setStream(stream);
-                          },
-                        );
-                      },
-                      separatorBuilder: (_, __) => const SizedBox(width: 10),
-                      itemCount: streams.length,
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.6),
+                      width: 0.7,
                     ),
                   ),
-                  const SizedBox(height: 16),
-                ],
-                Text(
-                  'Subject',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  height: 44,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemBuilder: (BuildContext context, int index) {
-                      final String subject = subjects[index];
-                      return ChoiceChip(
-                        label: Text(subject),
-                        showCheckmark: false,
-                        selected: filter.subject == subject,
-                        onSelected: (_) {
-                          ref
-                              .read(catalogFilterProvider.notifier)
-                              .setSubject(subject);
-                        },
-                      );
-                    },
-                    separatorBuilder: (_, __) => const SizedBox(width: 10),
-                    itemCount: subjects.length,
+                  child: TabBar(
+                    controller: _tabController,
+                    dividerColor: Colors.transparent,
+                    indicator: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    indicatorPadding: EdgeInsets.zero,
+                    labelColor: Colors.white,
+                    unselectedLabelColor: AppColors.text,
+                    labelStyle: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                    ),
+                    unselectedLabelStyle: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                    ),
+                    tabs: const <Widget>[
+                      Tab(text: 'All'),
+                      Tab(text: 'Completed'),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: Text(
-                        '${questionSetsAsync.maybeWhen(data: (sets) => sets.length, orElse: () => 0)} sets available',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppColors.textMuted,
-                              fontWeight: FontWeight.w600,
+                const SizedBox(height: 12),
+                GlassCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: TextField(
+                              controller: _searchController,
+                              onChanged: (value) => ref
+                                  .read(catalogFilterProvider.notifier)
+                                  .setSearch(value),
+                              decoration: const InputDecoration(
+                                hintText: 'Search by topic, subject, or stream',
+                                prefixIcon: Icon(Icons.search_rounded),
+                              ),
                             ),
+                          ),
+                          IconButton(
+                            onPressed: _showFilterBottomSheet,
+                            icon: const Icon(Icons.filter_list_rounded),
+                            tooltip: 'Filters',
+                          ),
+                        ],
                       ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        ref.read(catalogFilterProvider.notifier).reset();
-                        _searchController.clear();
-                      },
-                      child: const Text('Reset'),
-                    ),
-                  ],
+                      Consumer(
+                        builder: (context, ref, child) {
+                          final filter = ref.watch(catalogFilterProvider);
+                          final List<String> activeFilters = [];
+                          if (filter.grade != 'All') activeFilters.add(filter.grade);
+                          if (filter.grade == 'A/L' && filter.stream != 'All') activeFilters.add(filter.stream);
+                          if (filter.subject != 'All') activeFilters.add(filter.subject);
+                          
+                          if (activeFilters.isEmpty) {
+                            return const SizedBox.shrink();
+                          }
+                          
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 14),
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: activeFilters
+                                  .map((f) => Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary.withValues(alpha: 0.12),
+                                          borderRadius: BorderRadius.circular(999),
+                                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                                        ),
+                                        child: Text(
+                                          f,
+                                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                                color: AppColors.primary,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                        ),
+                                      ))
+                                  .toList(),
+                            ),
+                          );
+                        },
+                      ),
+
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 18),
-          questionSetsAsync.when(
-            data: (List<QuestionSet> sets) {
-              if (sets.isEmpty) {
-                return const _EmptyResult(
-                  title: 'No sets found',
-                  subtitle: 'Try a different subject, stream, or search term.',
-                );
-              }
-
-              final userAsync = ref.watch(authStateProvider);
-              final user = userAsync.maybeWhen(data: (u) => u, orElse: () => null);
-
-              return Column(
-                children: sets.map((QuestionSet set) {
-                  QuizResult? bestResult;
-                  if (user != null) {
-                    final results = user.quizResults.where((r) => r.quizId == set.id).toList();
-                    if (results.isNotEmpty) {
-                      results.sort((a, b) => (b.score / b.total).compareTo(a.score / a.total));
-                      bestResult = results.first;
-                    }
-                  }
-
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _QuestionSetCard(
-                      set: set,
-                      bestResult: bestResult,
-                      onTap: () => context.push('/quiz/${set.id}'),
-                    ),
-                  );
-                }).toList(),
-              );
-            },
-            loading: () => const _LoadingCards(),
-            error: (Object error, StackTrace stackTrace) => _EmptyResult(
-              title: 'Could not load practice sets',
-              subtitle: error.toString(),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: <Widget>[
+                _buildQuestionSetsList(questionSetsAsync, filter: (sets, user) => sets),
+                _buildQuestionSetsList(questionSetsAsync, filter: _filterCompletedSets),
+              ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  List<QuestionSet> _filterCompletedSets(List<QuestionSet> sets, AppUser? user) {
+    if (user == null) return [];
+    
+    final Set<String> completedQuizIds = user.quizResults
+        .where((result) => result.isPerfect)
+        .map((result) => result.quizId)
+        .toSet();
+    
+    return sets.where((set) => completedQuizIds.contains(set.id)).toList();
+  }
+
+  Widget _buildQuestionSetsList(
+    AsyncValue<List<QuestionSet>> questionSetsAsync, {
+    required List<QuestionSet> Function(List<QuestionSet>, AppUser?) filter,
+  }) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 140),
+      children: <Widget>[
+        questionSetsAsync.when(
+          data: (List<QuestionSet> sets) {
+            final userAsync = ref.watch(authStateProvider);
+            final user = userAsync.maybeWhen(data: (u) => u, orElse: () => null);
+            final filteredSets = filter(sets, user);
+
+            if (filteredSets.isEmpty) {
+              return const _EmptyResult(
+                title: 'No sets found',
+                subtitle: 'Try a different subject, stream, or search term.',
+              );
+            }
+
+            return Column(
+              children: filteredSets.map((QuestionSet set) {
+                QuizResult? bestResult;
+                if (user != null) {
+                  final results = user.quizResults.where((r) => r.quizId == set.id).toList();
+                  if (results.isNotEmpty) {
+                    results.sort((a, b) => (b.score / b.total).compareTo(a.score / a.total));
+                    bestResult = results.first;
+                  }
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _QuestionSetCard(
+                    set: set,
+                    bestResult: bestResult,
+                    onTap: () => context.push('/quiz/${set.id}'),
+                  ),
+                );
+              }).toList(),
+            );
+          },
+          loading: () => const _LoadingCards(),
+          error: (Object error, StackTrace stackTrace) => _EmptyResult(
+            title: 'Could not load practice sets',
+            subtitle: error.toString(),
+          ),
+        ),
+      ],
     );
   }
 }

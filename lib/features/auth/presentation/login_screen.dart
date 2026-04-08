@@ -235,7 +235,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
                   const SizedBox(height: 8),
-                  const BrandIntro(logoSize: 120, heroTag: 'acadmate-brand'),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      BrandLogo(
+                        size: 120,
+                        heroTag: 'acadmate-brand',
+                        imageUrl: 'assets/branding/app_icon.png',
+                      ),
+                      const SizedBox(height: 18),
+                      const BrandWordmark(),
+                      const SizedBox(height: 8),
+                      Text(
+                        AppConfig.tagline,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w500,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white70
+                              : AppColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 22),
                   GlassCard(
                     padding: const EdgeInsets.all(22),
