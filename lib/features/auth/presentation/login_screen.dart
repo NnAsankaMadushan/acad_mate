@@ -1,5 +1,6 @@
 import 'package:acad_mate/app/providers.dart';
 import 'package:acad_mate/core/config/app_config.dart';
+import 'package:acad_mate/core/theme/app_colors.dart';
 import 'package:acad_mate/core/widgets/brand_mark.dart';
 import 'package:acad_mate/core/widgets/glass_card.dart';
 import 'package:acad_mate/core/widgets/gradient_backdrop.dart';
@@ -182,29 +183,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: _SocialAuthButton(
                   label: 'Google',
                   accent: const Color(0xFFDB4437),
-                  glyph: 'G',
+                  borderColor: const Color(0xFFDB4437),
+                  icon: const Icon(Icons.g_mobiledata, size: 18),
                   isBusy: _isBusy,
                   onPressed: () =>
                       _signInWithProvider(SocialAuthProvider.google),
                 ),
               ),
-              const SizedBox(width: 12),
+              // Removed Facebook login button
+              /* const SizedBox(width: 12),
               Expanded(
                 child: _SocialAuthButton(
                   label: 'Facebook',
                   accent: const Color(0xFF1877F2),
-                  glyph: 'F',
+                  icon: const Icon(Icons.facebook, size: 18),
                   isBusy: _isBusy,
                   onPressed: () =>
                       _signInWithProvider(SocialAuthProvider.facebook),
                 ),
-              ),
+              ), */
               const SizedBox(width: 12),
               Expanded(
                 child: _SocialAuthButton(
                   label: 'Apple',
                   accent: Colors.black,
-                  glyph: 'A',
+                  borderColor: Colors.white,
+                  icon: const Icon(Icons.apple, size: 18),
                   isBusy: _isBusy,
                   onPressed: () =>
                       _signInWithProvider(SocialAuthProvider.apple),
@@ -238,30 +242,79 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: <Widget>[
-                        Row(
-                          children: <Widget>[
-                            Expanded(
-                              child: ChoiceChip(
-                                label: const Text('Sign In'),
-                                showCheckmark: false,
-                                selected: _isSignIn,
-                                onSelected: (_) {
-                                  setState(() => _isSignIn = true);
-                                },
+                        Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            children: <Widget>[
+                              Expanded(
+                                child: InkWell(
+                                  borderRadius: const BorderRadius.horizontal(
+                                    left: Radius.circular(20),
+                                  ),
+                                  onTap: () => setState(() => _isSignIn = true),
+                                  child: Container(
+                                    height: 52,
+                                    decoration: BoxDecoration(
+                                      color: _isSignIn
+                                          ? AppColors.primary
+                                          : Colors.transparent,
+                                      borderRadius: const BorderRadius.horizontal(
+                                        left: Radius.circular(20),
+                                      ),
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      'Sign In',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelLarge
+                                          ?.copyWith(
+                                            color: _isSignIn
+                                                ? Colors.white
+                                                : AppColors.text,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ChoiceChip(
-                                label: const Text('Create Account'),
-                                showCheckmark: false,
-                                selected: !_isSignIn,
-                                onSelected: (_) {
-                                  setState(() => _isSignIn = false);
-                                },
+                              Expanded(
+                                child: InkWell(
+                                  borderRadius: const BorderRadius.horizontal(
+                                    right: Radius.circular(20),
+                                  ),
+                                  onTap: () => setState(() => _isSignIn = false),
+                                  child: Container(
+                                    height: 52,
+                                    decoration: BoxDecoration(
+                                      color: !_isSignIn
+                                          ? AppColors.primary
+                                          : Colors.transparent,
+                                      borderRadius: const BorderRadius.horizontal(
+                                        right: Radius.circular(20),
+                                      ),
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      'Create Account',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelLarge
+                                          ?.copyWith(
+                                            color: !_isSignIn
+                                                ? Colors.white
+                                                : AppColors.text,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 24),
                         AnimatedSwitcher(
@@ -454,14 +507,16 @@ class _SocialAuthButton extends StatelessWidget {
   const _SocialAuthButton({
     required this.label,
     required this.accent,
-    required this.glyph,
+    required this.icon,
+    required this.borderColor,
     required this.isBusy,
     required this.onPressed,
   });
 
   final String label;
   final Color accent;
-  final String glyph;
+  final Color borderColor;
+  final Widget icon;
   final bool isBusy;
   final VoidCallback onPressed;
 
@@ -473,7 +528,7 @@ class _SocialAuthButton extends StatelessWidget {
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
         minimumSize: const Size.fromHeight(52),
-        side: BorderSide(color: accent.withValues(alpha: 0.25)),
+        side: BorderSide(color: borderColor),
         foregroundColor: colors.onSurface,
       ),
       child: Row(
@@ -487,13 +542,7 @@ class _SocialAuthButton extends StatelessWidget {
               borderRadius: BorderRadius.circular(999),
             ),
             alignment: Alignment.center,
-            child: Text(
-              glyph,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: accent,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
+            child: icon,
           ),
           const SizedBox(width: 8),
           Flexible(
