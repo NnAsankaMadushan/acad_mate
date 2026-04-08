@@ -36,7 +36,7 @@ class QuestionSet {
 
   int get questionCount => questions.length;
 
-  Color get accentColor => Color(accentColorValue);
+  Color get accentColor => Color(accentColorValue).withValues(alpha: 1.0);
 
   bool matches(CatalogFilter filter) {
     final String search = filter.search.trim().toLowerCase();

@@ -218,82 +218,65 @@ class _HeroCard extends StatelessWidget {
       alignment: Alignment.topCenter,
       children: <Widget>[
         // Background Curved Shape
-        Container(
+        GlassCard(
           margin: const EdgeInsets.only(bottom: 60), // Room for the floating card overlay
-          width: double.infinity,
-          decoration: BoxDecoration(
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.zero,
-              bottom: Radius.circular(72), // Pronounced bottom curve
-            ),
-            boxShadow: <BoxShadow>[
-              BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.24),
-                blurRadius: 32,
-                offset: const Offset(0, 18),
-              ),
-            ],
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.zero,
+            bottom: Radius.circular(72), // Pronounced bottom curve
           ),
-          child: ClipRRect(
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.zero,
-              bottom: Radius.circular(72),
+          blurSigma: 18,
+          opacity: 0.24,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 50),
+            decoration: const BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: Colors.white24,
+                  width: 1.5,
+                ),
+              ),
             ),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.25),
-                  border: Border(
-                    bottom: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      width: 1.5,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: <Widget>[
+                if (avatarUrl != null && avatarUrl!.isNotEmpty)
+                  CircleAvatar(
+                    radius: 36,
+                    backgroundImage: NetworkImage(avatarUrl!),
+                    backgroundColor: Colors.white,
+                  )
+                else
+                  CircleAvatar(
+                    radius: 36,
+                    backgroundColor: Colors.white.withValues(alpha: 0.2),
+                    child: Text(
+                      userName.isNotEmpty ? userName[0].toUpperCase() : 'S',
+                      style: const TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
+                const SizedBox(height: 16),
+                Text(
+                  'Hi, $userName',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                      ),
+                  textAlign: TextAlign.center,
                 ),
-                padding: const EdgeInsets.fromLTRB(20, 40, 20, 78), // Space so text avoids floating card, added more top padding for edge-to-edge
-                child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: <Widget>[
-              if (avatarUrl != null && avatarUrl!.isNotEmpty)
-                CircleAvatar(
-                  radius: 36,
-                  backgroundImage: NetworkImage(avatarUrl!),
-                  backgroundColor: Colors.white,
-                )
-              else
-                CircleAvatar(
-                  radius: 36,
-                  backgroundColor: Colors.white.withValues(alpha: 0.2),
-                  child: Text(
-                    userName.isNotEmpty ? userName[0].toUpperCase() : 'S',
-                    style: const TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                    ),
-                  ),
+                const SizedBox(height: 8),
+                Text(
+                  'Keep the momentum going. Practice a set or open a paper in seconds.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.9),
+                      ),
+                  textAlign: TextAlign.center,
                 ),
-              const SizedBox(height: 16),
-              Text(
-                'Hi, $userName',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                    ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Keep the momentum going. Practice a set or open a paper in seconds.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.9),
-                    ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-              ),
+              ],
             ),
           ),
         ),
@@ -307,7 +290,7 @@ class _HeroCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(28),
               boxShadow: <BoxShadow>[
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.08),
@@ -433,11 +416,6 @@ class _QuestionSetMiniCard extends StatelessWidget {
                 Row(
                   children: <Widget>[
                     _Badge(label: set.badge, color: set.accentColor),
-                    const SizedBox(width: 8),
-                    _Badge(
-                      label: '${set.rating.toStringAsFixed(1)} ★',
-                      color: AppColors.gold,
-                    ),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -557,6 +535,11 @@ class _Badge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // If the background is essentially very dark, and the color is also dark,
+    // we want to guarantee the text is visible.
+    final bool isDark = color.computeLuminance() < 0.25;
+    final Color textColor = isDark ? Colors.white : color;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
@@ -567,7 +550,7 @@ class _Badge extends StatelessWidget {
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
               fontWeight: FontWeight.w800,
-              color: color,
+              color: textColor,
             ),
       ),
     );
