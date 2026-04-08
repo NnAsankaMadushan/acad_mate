@@ -9,8 +9,12 @@ import 'package:acad_mate/domain/entities/past_paper.dart';
 import 'package:acad_mate/domain/entities/question_set.dart';
 import 'package:acad_mate/domain/repositories/academic_repository.dart';
 import 'package:acad_mate/domain/repositories/auth_repository.dart';
+import 'package:acad_mate/data/firebase/firebase_task_repository.dart';
+import 'package:acad_mate/domain/entities/task.dart';
+import 'package:acad_mate/domain/repositories/task_repository.dart';
 import 'package:acad_mate/features/papers/application/paper_favorites_controller.dart';
 import 'package:acad_mate/features/practice/application/catalog_controller.dart';
+import 'package:acad_mate/features/tasks/application/tasks_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod/riverpod.dart';
 
@@ -68,6 +72,13 @@ final pastPaperViewModeProvider =
     NotifierProvider<PastPaperViewModeNotifier, PastPaperViewMode>(
   PastPaperViewModeNotifier.new,
 );
+
+final taskRepositoryProvider = Provider<TaskRepository>(
+  (_) => FirebaseTaskRepository(),
+);
+
+final tasksProvider =
+    AsyncNotifierProvider<TasksController, List<Task>>(TasksController.new);
 
 class PastPaperViewModeNotifier extends Notifier<PastPaperViewMode> {
   @override

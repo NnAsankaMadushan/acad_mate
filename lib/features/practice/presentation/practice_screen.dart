@@ -78,6 +78,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
                       final String grade = grades[index];
                       return ChoiceChip(
                         label: Text(grade),
+                        showCheckmark: false,
                         selected: filter.grade == grade,
                         onSelected: (_) {
                           ref.read(catalogFilterProvider.notifier).setGrade(grade);
@@ -105,6 +106,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
                         final String stream = streams[index];
                         return ChoiceChip(
                           label: Text(stream),
+                          showCheckmark: false,
                           selected: filter.stream == stream,
                           onSelected: (_) {
                             ref
@@ -134,6 +136,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
                       final String subject = subjects[index];
                       return ChoiceChip(
                         label: Text(subject),
+                        showCheckmark: false,
                         selected: filter.subject == subject,
                         onSelected: (_) {
                           ref

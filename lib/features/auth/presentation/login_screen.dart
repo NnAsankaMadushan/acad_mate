@@ -243,6 +243,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             Expanded(
                               child: ChoiceChip(
                                 label: const Text('Sign In'),
+                                showCheckmark: false,
                                 selected: _isSignIn,
                                 onSelected: (_) {
                                   setState(() => _isSignIn = true);
@@ -253,6 +254,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             Expanded(
                               child: ChoiceChip(
                                 label: const Text('Create Account'),
+                                showCheckmark: false,
                                 selected: !_isSignIn,
                                 onSelected: (_) {
                                   setState(() => _isSignIn = false);

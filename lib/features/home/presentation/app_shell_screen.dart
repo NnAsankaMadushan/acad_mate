@@ -4,6 +4,7 @@ import 'package:acad_mate/features/home/presentation/home_screen.dart';
 import 'package:acad_mate/features/papers/presentation/past_papers_screen.dart';
 import 'package:acad_mate/features/practice/presentation/practice_screen.dart';
 import 'package:acad_mate/features/profile/presentation/profile_screen.dart';
+import 'package:acad_mate/features/tasks/presentation/tasks_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -43,6 +44,7 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
       ),
       const PracticeScreen(),
       const PastPapersScreen(),
+      const TasksScreen(),
       ProfileScreen(onSignOut: _signOut),
     ];
 
@@ -77,6 +79,10 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
               NavigationDestination(
                 icon: Icon(Icons.picture_as_pdf_rounded),
                 label: 'Papers',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.task_alt_rounded),
+                label: 'Tasks',
               ),
               NavigationDestination(
                 icon: Icon(Icons.person_rounded),

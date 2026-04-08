@@ -50,6 +50,7 @@ class PastPapersScreen extends ConsumerWidget {
                 const SizedBox(width: 8),
                 ChoiceChip(
                   label: const Text('All papers'),
+                  showCheckmark: false,
                   selected: ref.watch(pastPaperViewModeProvider) ==
                       PastPaperViewMode.all,
                   onSelected: (_) => ref
@@ -59,6 +60,7 @@ class PastPapersScreen extends ConsumerWidget {
                 const SizedBox(width: 10),
                 ChoiceChip(
                   label: const Text('Saved'),
+                  showCheckmark: false,
                   selected: ref.watch(pastPaperViewModeProvider) ==
                       PastPaperViewMode.favorites,
                   onSelected: (_) => ref
@@ -93,6 +95,7 @@ class PastPapersScreen extends ConsumerWidget {
                       final String grade = grades[index];
                       return ChoiceChip(
                         label: Text(grade),
+                        showCheckmark: false,
                         selected: filter.grade == grade,
                         onSelected: (_) => ref
                             .read(catalogFilterProvider.notifier)
@@ -120,6 +123,7 @@ class PastPapersScreen extends ConsumerWidget {
                         final String stream = streams[index];
                         return ChoiceChip(
                           label: Text(stream),
+                          showCheckmark: false,
                           selected: filter.stream == stream,
                           onSelected: (_) => ref
                               .read(catalogFilterProvider.notifier)
@@ -147,6 +151,7 @@ class PastPapersScreen extends ConsumerWidget {
                       final String subject = subjects[index];
                       return ChoiceChip(
                         label: Text(subject),
+                        showCheckmark: false,
                         selected: filter.subject == subject,
                         onSelected: (_) => ref
                             .read(catalogFilterProvider.notifier)
