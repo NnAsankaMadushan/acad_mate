@@ -10,6 +10,7 @@ class PastPaper {
     required this.year,
     required this.examType,
     required this.pdfUrl,
+    this.answerPdfUrl = '',
     this.storagePath,
     this.pages = 0,
     this.fileSize = '',
@@ -23,6 +24,7 @@ class PastPaper {
   final int year;
   final String examType;
   final String pdfUrl;
+  final String answerPdfUrl;
   final String? storagePath;
   final int pages;
   final String fileSize;
@@ -52,6 +54,7 @@ class PastPaper {
       year: (map['year'] as num?)?.toInt() ?? 2024,
       examType: map['examType']?.toString() ?? 'Paper',
       pdfUrl: map['pdfUrl']?.toString() ?? '',
+      answerPdfUrl: map['answerPdfUrl']?.toString() ?? '',
       storagePath: map['storagePath']?.toString(),
       pages: (map['pages'] as num?)?.toInt() ?? 0,
       fileSize: map['fileSize']?.toString() ?? '',
@@ -68,6 +71,7 @@ class PastPaper {
       'year': year,
       'examType': examType,
       'pdfUrl': pdfUrl,
+      'answerPdfUrl': answerPdfUrl,
       'storagePath': storagePath,
       'pages': pages,
       'fileSize': fileSize,

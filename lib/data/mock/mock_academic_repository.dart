@@ -100,6 +100,9 @@ class MockAcademicRepository implements AcademicRepository {
 const String _samplePdf =
     'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
 
+const String _sampleAnswerPdf =
+    'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
+
 final List<QuestionSet> _sampleQuestionSets = _generateSampleQuestionSets();
 
 List<QuestionSet> _generateSampleQuestionSets() {
@@ -412,6 +415,7 @@ const List<PastPaper> _samplePastPapers = <PastPaper>[
     year: 2024,
     examType: 'Annual Exam',
     pdfUrl: _samplePdf,
+    answerPdfUrl: _sampleAnswerPdf,
     pages: 16,
     fileSize: '4.2 MB',
   ),

@@ -7,7 +7,6 @@ import 'package:acad_mate/domain/entities/past_paper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class PastPaperViewerScreen extends ConsumerWidget {
   const PastPaperViewerScreen({
@@ -22,13 +21,6 @@ class PastPaperViewerScreen extends ConsumerWidget {
     final AsyncValue<PaperFavoritesState> favoritesAsync =
         ref.watch(paperFavoritesProvider);
     final paperAsync = ref.watch(pastPaperProvider(paperId));
-
-    Future<void> _openLocalFile(String path) async {
-      final Uri fileUri = Uri.file(path);
-      if (await canLaunchUrl(fileUri)) {
-        await launchUrl(fileUri);
-      }
-    }
 
     return Scaffold(
       appBar: AppBar(
@@ -54,11 +46,6 @@ class PastPaperViewerScreen extends ConsumerWidget {
                   orElse: () => false,
                 ) ||
                 false;
-            final String? localPath = favoritesAsync.maybeWhen(
-                  data: (PaperFavoritesState favorites) =>
-                      favorites.localPath(paper.id),
-                  orElse: () => null,
-                );
 
             return Column(
               children: <Widget>[
@@ -69,6 +56,25 @@ class PastPaperViewerScreen extends ConsumerWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: <Widget>[
+                        if (paper.answerPdfUrl.isNotEmpty)
+                          IconButton(
+                            icon: Icon(
+                              Icons.favorite_border,
+                              color: AppColors.primary,
+                            ),
+                            tooltip: 'View answers',
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (BuildContext context) =>
+                                      AnswerPdfViewerScreen(
+                                    title: '${paper.title} answers',
+                                    answerPdfUrl: paper.answerPdfUrl,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                         IconButton(
                           icon: Icon(
                             isFavorite
@@ -122,6 +128,55 @@ class PastPaperViewerScreen extends ConsumerWidget {
           error: (Object error, StackTrace stackTrace) => Center(
             child: GlassCard(
               child: Text(error.toString()),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class AnswerPdfViewerScreen extends StatelessWidget {
+  const AnswerPdfViewerScreen({
+    super.key,
+    required this.title,
+    required this.answerPdfUrl,
+  });
+
+  final String title;
+  final String answerPdfUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          title,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+      body: GradientBackdrop(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: <BoxShadow>[
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 24,
+                  offset: const Offset(0, 12),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(28),
+              child: SfPdfViewer.network(
+                answerPdfUrl,
+                canShowScrollHead: true,
+                canShowPaginationDialog: true,
+              ),
             ),
           ),
         ),

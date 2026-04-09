@@ -170,8 +170,6 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
   @override
   Widget build(BuildContext context) {
     final questionSetsAsync = ref.watch(questionSetsProvider);
-    final userAsync = ref.watch(authStateProvider);
-    final user = userAsync.maybeWhen(data: (u) => u, orElse: () => null);
 
     return GradientBackdrop(
       child: Column(
@@ -192,7 +190,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.6),
+                      color: Colors.white.withValues(alpha: 0.6),
                       width: 0.7,
                     ),
                   ),
@@ -295,7 +293,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
             child: TabBarView(
               controller: _tabController,
               children: <Widget>[
-                _buildQuestionSetsList(questionSetsAsync, filter: (sets, user) => sets),
+                _buildQuestionSetsList(questionSetsAsync, filter: _filterAllSets),
                 _buildQuestionSetsList(questionSetsAsync, filter: _filterCompletedSets),
               ],
             ),
@@ -303,6 +301,17 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
         ],
       ),
     );
+  }
+
+  List<QuestionSet> _filterAllSets(List<QuestionSet> sets, AppUser? user) {
+    if (user == null) return sets;
+
+    final Set<String> perfectQuizIds = user.quizResults
+        .where((result) => result.isPerfect)
+        .map((result) => result.quizId)
+        .toSet();
+
+    return sets.where((set) => !perfectQuizIds.contains(set.id)).toList();
   }
 
   List<QuestionSet> _filterCompletedSets(List<QuestionSet> sets, AppUser? user) {
@@ -436,7 +445,6 @@ class _QuestionSetCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
               ],
-              _RatingPill(value: set.rating),
             ],
           ),
           const SizedBox(height: 14),
@@ -553,30 +561,6 @@ class _MetaChip extends StatelessWidget {
                 ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _RatingPill extends StatelessWidget {
-  const _RatingPill({required this.value});
-
-  final double value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.gold.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        value.toStringAsFixed(1),
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: AppColors.secondary,
-            ),
       ),
     );
   }

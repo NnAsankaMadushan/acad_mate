@@ -152,6 +152,7 @@ class FirebaseAcademicRepository implements AcademicRepository {
   ) async {
     final Map<String, dynamic> data = snapshot.data() ?? <String, dynamic>{};
     String pdfUrl = data['pdfUrl']?.toString() ?? '';
+    final String answerPdfUrl = data['answerPdfUrl']?.toString() ?? '';
     final String? storagePath = data['storagePath']?.toString();
 
     if (pdfUrl.isEmpty && storagePath != null && storagePath.isNotEmpty) {
@@ -162,6 +163,7 @@ class FirebaseAcademicRepository implements AcademicRepository {
       ...data,
       'id': snapshot.id,
       'pdfUrl': _normalizePdfUrl(pdfUrl),
+      'answerPdfUrl': _normalizePdfUrl(answerPdfUrl),
       'storagePath': storagePath,
     };
     return PastPaper.fromMap(normalized);
